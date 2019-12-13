@@ -9,14 +9,14 @@ The calculation of topological invariants supports Quantum ESPRESSO only.
 ### How do I get set up? ###
 
 The Topological Workflow has the following code dependencies:
-..*Z2pack plugin 	         	(by Antimo Marrazzo, THEOS & NCCR MARVEL, EPFL)
-..*PWworkflow      	     	    (by Nicola Mounet, THEOS & NCCR MARVEL, EPFL - now at CERN)
-..*(optional) Bands.x plugin 	(by Davide Campi, THEOS & NCCR MARVEL, EPFL)
+* Z2pack plugin 	         	(by Antimo Marrazzo, THEOS & NCCR MARVEL, EPFL)
+* PWworkflow      	     	    (by Nicola Mounet, THEOS & NCCR MARVEL, EPFL - now at CERN)
+* (optional) Bands.x plugin 	(by Davide Campi, THEOS & NCCR MARVEL, EPFL)
 
 ### Contribution guidelines ###
 
-..*Never commit to the master branch!
-..*Fork a devel branch for your sub-project and commit there
+* Never commit to the master branch!
+* Fork a devel branch for your sub-project and commit there
 
 ### Who do I talk to? ###
 Contact of repository owner : Antimo Marrazzo (THEOS & NCCR MARVEL,EPFL), antimo.marrazzo@epfl.ch
