@@ -55,7 +55,7 @@ class Z2packCalculation(JobCalculation):
     _PREFIX = 'aiida'
     _INPUT_NSCF_FILE_NAME = 'aiida.nscf.in'
     _OUTPUT_NSCF_FILE_NAME = 'aiida.nscf.out'
-    _DATAFILE_XML_BASENAME = 'data-file.xml'
+    _DATAFILE_XML_BASENAME = 'data-file-schema.xml'
     _DATAFILE_XML = 'undefined.xml'
     _Z2pack_folder = './'
     _Z2pack_folder_restart_files=[]
