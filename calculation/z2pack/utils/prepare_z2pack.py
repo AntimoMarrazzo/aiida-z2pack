@@ -1,82 +1,69 @@
 from aiida.common import exceptions
+from aiida_quantumespresso.calculations import _uppercase_dict
 
-def prepare_z2pack(self, folder, inputdict):
-    # input_filename = folder.get_abs_path(self._DEFAULT_INPUT_Z2PACK)
+def prepare_z2pack(self, folder):
     input_filename = folder.get_abs_path(self._DEFAULT_INPUT_FILE)
     try:
-        nscf_code = inputdict.pop(self.get_linkname('nscf_code'))
+        nscf_code = self.inputs.nscf_code
     except KeyError:
         raise exceptions.InputValidationError("No nscf code specified for this calculation")
     try:
-        overlap_code = inputdict.pop(self.get_linkname('overlap_code'))
+        overlap_code = self.inputs.overlap_code
     except KeyError:
         raise exceptions.InputValidationError("No overlap code specified for this calculation")
     try:
-        wannier90_code = inputdict.pop(self.get_linkname('wannier90_code'))
+        wannier90_code = self.inputs.wannier90_code
     except KeyError:
         raise exceptions.InputValidationError("No Wannier90 code specified for this calculation")
     
-    try:
-        settings_dict = inputdict.pop(self.get_linkname('settings'))
-        try:
-            mpi_command=settings_dict.get_dict()['mpi_command']
-        except KeyError:
-            raise exceptions.InputValidationError("No mpi_command code specified for this calculation")
-        try:
-            npools = settings_dict.get_dict()['npools']
-            if type(npools)!=int:
-                raise exceptions.InputValidationError("npools must be an integer.")
-            else:
-                pools_cmd = ' -nk '+str(npools) + ' '                           
-        except KeyError:
-            pools_cmd = ''
-        try:
-            dim_mode = settings_dict.get_dict()['dimension_mode']
-        except KeyError:
-            raise exceptions.InputValidationError("No dimension_mode specified for this calculation")
-        try:
-            invariant = settings_dict.get_dict()['invariant']
-        except KeyError:
-            raise exceptions.InputValidationError("No invariant specified for this calculation")
-        try:
-            pos_tol = settings_dict.get_dict()['pos_tol']
-        except KeyError:
-            pos_tol = self._DEFAULT_POS_TOLERANCE
-        try:
-            gap_tol = settings_dict.get_dict()['gap_tol']
-        except KeyError:
-            gap_tol = self._DEFAULT_GAP_TOLERANCE
-        try:
-            move_tol = settings_dict.get_dict()['move_tol']
-        except KeyError:
-            move_tol = self._DEFAULT_MOVE_TOLERANCE
-        try:
-            num_lines = settings_dict.get_dict()['num_lines']
-        except KeyError:
-            num_lines = self._DEFAULT_NUM_LINES
-        try:
-            min_neighbour_dist=settings_dict.get_dict()['min_neighbour_dist']
-        except KeyError:
-            min_neighbour_dist= self._DEFAULT_MIN_NEIGHBOUR_DISTANCE
-        try:
-            iterator=settings_dict.get_dict()['iterator']
-        except KeyError:
-            iterator= self._DEFAULT_ITERATOR
-        try:
-            restart_mode=settings_dict.get_dict()['restart']
-        except KeyError:
-            restart_mode=False
-        if(dim_mode=='3D'):
-            try:
-                surface = settings_dict.get_dict()['surface']
-            except KeyError:
-                raise exceptions.InputValidationError("A surface must be specified for dim_mode==3D ")
-        try:
-            prepend_code=settings_dict.get_dict()['prepend_code']
-        except KeyError:
-            prepend_code=''
-    except KeyError:
+
+    if 'settings' in self.inputs:
+        settings_dict = _uppercase_dict(self.inputs.settings.get_dict(), dict_name='settings')
+        settings_dict = self.inputs.settings.get_dict()
+    else:
         raise exceptions.InputValidationError("No settings code specified for this calculation")          
+
+    try:
+        mpi_command = settings_dict['mpi_command']
+    except KeyError:
+        raise exceptions.InputValidationError("No mpi_command code specified for this calculation")
+
+    if not 'npools' in settings_dict:
+        pools_cmd = ''
+    else:
+        npools = settings_dict['npools']
+        if isinstance(npools, int):
+            pools_cmd = ' -nk ' + str(npools) + ' '
+        else:
+            raise exceptions.InputValidationError("npools must be an integer.")
+
+
+    try:
+        dim_mode = settings_dict['dimension_mode']
+    except KeyError:
+        raise exceptions.InputValidationError("No dimension_mode specified for this calculation")
+
+    try:
+        invariant = settings_dict['invariant']
+    except KeyError:
+        raise exceptions.InputValidationError("No invariant specified for this calculation")
+
+    pos_tol            = settings_dict.get('pos_tol', self._DEFAULT_POS_TOLERANCE)
+    gap_tol            = settings_dict.get('gap_tol', self._DEFAULT_GAP_TOLERANCE)
+    move_tol           = settings_dict.get('move_tol', self._DEFAULT_MOVE_TOLERANCE)
+    num_lines          = settings_dict.get('num_lines', self._DEFAULT_NUM_LINES)
+    min_neighbour_dist = settings_dict.get('min_neighbour_dist', self._DEFAULT_MIN_NEIGHBOUR_DISTANCE)
+    iterator           = settings_dict.get('iterator', self._DEFAULT_ITERATOR)
+    restart_mode       = settings_dict.get('restart_mode', False)
+    prepend_code       = settings_dict.get('prepend_code', '')
+
+
+
+    if dim_mode == '3D':
+        try:
+            surface = settings_dict.get_dict()['surface']
+        except KeyError:
+            raise exceptions.InputValidationError("A surface must be specified for dim_mode==3D ")
     
     input_file_lines=[]
     input_file_lines.append('#!/usr/bin/env python3')
@@ -88,14 +75,15 @@ def prepare_z2pack(self, folder, inputdict):
     input_file_lines.append('import subprocess')
     input_file_lines.append('import xml.etree.ElementTree as ET')
     input_file_lines.append('import json')
-    nscf_cmd = ' '+mpi_command+' ' +nscf_code.get_execname()
-    overlap_cmd =' '+mpi_command+' ' +overlap_code.get_execname()
-    #wannier90_cmd =  wannier90_code.get_execname() #Serial w90
-    wannier90_cmd = ' '+mpi_command+' ' + wannier90_code.get_execname() #Parallel w90
+
+    nscf_cmd      = ' {} {}'.format(mpi_command, nscf_code.get_execname())
+    overlap_cmd   = ' {} {}'.format(mpi_command, overlap_code.get_execname())
+    wannier90_cmd = ' {} {}'.format(mpi_command, wannier90_code.get_execname())
     
     z2cmd = ("('"+wannier90_cmd + ' aiida '+' -pp;' +"'"+  "+"+'\n'+
              "'"+nscf_cmd + pools_cmd + '< ' +self._INPUT_NSCF_FILE_NAME + '>& pw.log;' +"'"+ "+" +'\n'+
              "'"+overlap_cmd + '< ' + self._INPUT_OVERLAP_FILE_NAME+' >& pw2wan.log;' + "')")
+
     input_file_lines.append('z2cmd =' +  z2cmd)
     input_files = [ self._INPUT_NSCF_FILE_NAME, self._INPUT_OVERLAP_FILE_NAME,self._INPUT_W90_FILE_NAME]
     input_file_lines.append('input_files='+str(input_files))
