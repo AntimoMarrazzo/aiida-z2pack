@@ -1,26 +1,34 @@
 # -*- coding: utf-8 -*-
-import copy, os
-import numpy as np
-from aiida.common.utils import classproperty
-from aiida.common.exceptions import InputValidationError, ModificationNotAllowed
-from aiida.common.datastructures import CalcInfo, CodeInfo, code_run_modes
-from aiida.orm import JobCalculation, DataFactory
-from aiida_quantumespresso.calculations import (
-    _lowercase_dict, _uppercase_dict, get_input_data_text)
-from aiida_quantumespresso.calculations.pw import PwCalculation
-from aiida.orm.code import Code
-from aiida.orm.data.array.kpoints import KpointsData
-from aiida.orm.data.upf import UpfData
-from aiida.orm.data.upf import get_pseudos_from_structure
-from aiida.orm.data.orbital import OrbitalData, OrbitalFactory
-from aiida.orm.data.parameter import ParameterData
-from aiida.orm.data.remote import RemoteData
-from aiida.orm.data.structure import StructureData
-from aiida.transport import Transport
-__authors__ = "Antimo Marrazzo and The AiiDA team."
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
-__license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.6.0"
+# import copy, os
+# import numpy as np
+# from aiida.common.utils import classproperty
+# from aiida.common.exceptions import InputValidationError, ModificationNotAllowed
+# from aiida.common.datastructures import CalcInfo, CodeInfo, code_run_modes
+# from aiida.orm import JobCalculation, DataFactory
+# from aiida_quantumespresso.calculations import (
+#     _lowercase_dict, _uppercase_dict, get_input_data_text)
+# from aiida_quantumespresso.calculations.pw import PwCalculation
+# from aiida.orm.code import Code
+# from aiida.orm.data.array.kpoints import KpointsData
+# from aiida.orm.data.upf import UpfData
+# from aiida.orm.data.upf import get_pseudos_from_structure
+# from aiida.orm.data.orbital import OrbitalData, OrbitalFactory
+# from aiida.orm.data.parameter import ParameterData
+# from aiida.orm.data.remote import RemoteData
+# from aiida.orm.data.structure import StructureData
+# from aiida.transport import Transport
+
+import os
+import six
+import copy
+from six.moves import zip
+
+from aiida import orm
+from aiida.engine import CalcJob
+# __authors__ = "Antimo Marrazzo and The AiiDA team."
+# __copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
+# __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
+# __version__ = "0.6.0"
 
 def _wann_site_format(structure_sites):
     '''
@@ -32,7 +40,7 @@ def _wann_site_format(structure_sites):
         Converts an input list item into a str
         '''
         list_item = copy.deepcopy(list_item)
-        if isinstance(list_item, (str,unicode) ):
+        if isinstance(list_item, str):
             return list_item
         else:
             return ' ' + ' '.join([str(_) for _ in list_item]) + ' '
@@ -45,7 +53,7 @@ def _wann_site_format(structure_sites):
     return calc_positions, calc_kind_names
 
 
-class Z2packCalculation(JobCalculation):
+class Z2packCalculation(CalcJob):
     """
     Plugin for Z2pack, a code for computing topological invariants.
     See http://z2pack.ethz.ch/ for more details
@@ -130,6 +138,25 @@ class Z2packCalculation(JobCalculation):
                                   ('SYSTEM', 'cosab'), ('SYSTEM', 'cosac'), ('SYSTEM', 'cosbc'),
         ]
 
+        @classmethod
+        def define(cls, spec):
+            # yapf: disable
+            super(Z2packCalculation, cls).define(spec)
+            spec.input('metadata.options.input_filename', valid_type=six.string_types, default=cls._DEFAULT_INPUT_FILE)
+            spec.input('metadata.options.output_filename', valid_type=six.string_types, default=cls._DEFAULT_OUTPUT_FILE)
+            spec.input('metadata.options.withmpi', valid_type=bool, default=True)  # Override default withmpi=False
+            spec.input('structure', valid_type=orm.StructureData,
+                help='The input structure.')
+            spec.input('parameters', valid_type=orm.Dict,
+                help='The input parameters that are to be used to construct the input file.')
+            spec.input('settings', valid_type=orm.Dict, required=False,
+                help='Optional parameters to affect the way the calculation job and the parsing are performed.')
+            spec.input('parent_folder', valid_type=orm.RemoteData, required=False,
+                help='An optional working directory of a previously completed calculation to restart from.')
+            spec.input('vdw_table', valid_type=orm.SinglefileData, required=False,
+                help='Optional van der Waals table contained in a `SinglefileData`.')
+            spec.input_namespace('pseudos', valid_type=orm.UpfData, dynamic=True,
+                help='A mapping of `UpfData` nodes onto the kind name to which they should apply.')
 
     @classproperty
     def _use_methods(cls):

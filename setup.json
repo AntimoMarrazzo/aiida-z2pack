@@ -12,9 +12,9 @@
         "aiida.calculations": [
             "z2pack = aiida_z2pack.calculations.z2pack:Z2packCalculation",
         ],
-        "aiida.data": [
-            "quantumespresso.force_constants = aiida_quantumespresso.data.force_constants:ForceConstantsData"
-        ],
+        // "aiida.data": [
+        //     "quantumespresso.force_constants = aiida_quantumespresso.data.force_constants:ForceConstantsData"
+        // ],
         "aiida.parsers": [
             "z2pack = aiida_z2pack.parsers.z2pack:Z2packParser",
         ],
@@ -32,27 +32,28 @@
         //     "aiida-quantumespresso = aiida_quantumespresso.cli:cmd_root"
         // ]
     },
-    "extras_require": {
-        "dev": [
-            "pre-commit==1.17.0",
-            "prospector==1.1.7",
-            "pylint==1.9.4; python_version<'3.0'",
-            "pylint==2.3.1; python_version>='3.0'",
-            "pgtest==1.2.0",
-            "pytest==3.6.3",
-            "pytest-regressions==1.0.6",
-            "yapf==0.28.0"
-        ],
-        "tcod": [
-            "aiida-tcod"
-        ],
-        "docs": [
-            "Sphinx",
-            "docutils",
-            "sphinx_rtd_theme"
-        ]
-    },
+    // "extras_require": {
+    //     "dev": [
+    //         "pre-commit==1.17.0",
+    //         "prospector==1.1.7",
+    //         "pylint==1.9.4; python_version<'3.0'",
+    //         "pylint==2.3.1; python_version>='3.0'",
+    //         "pgtest==1.2.0",
+    //         "pytest==3.6.3",
+    //         "pytest-regressions==1.0.6",
+    //         "yapf==0.28.0"
+    //     ],
+    //     "tcod": [
+    //         "aiida-tcod"
+    //     ],
+    //     "docs": [
+    //         "Sphinx",
+    //         "docutils",
+    //         "sphinx_rtd_theme"
+    //     ]
+    // },
     "install_requires": [
+        "numpy",
         "z2pack",
         // "aiida_core[atomic_tools]>=1.0.0,<2.0.0",
         // "matplotlib<3.0.0; python_version<'3'",
