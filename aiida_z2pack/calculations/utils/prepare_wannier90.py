@@ -33,7 +33,7 @@ def prepare_wannier90(self, folder):
     try:
         # parameters = inputdict.pop(self.get_linkname('wannier90_parameters'))
         parameters = self.inputs.wannier90_parameters
-    except KeyError:
+    except exceptions.NotExistent:
         raise exceptions.InputValidationError("No parameters specified for this calculation")
     if not isinstance(parameters, orm.Dict):
         raise exceptions.InputValidationError("parameters is not of type orm.Dict")
@@ -46,7 +46,7 @@ def prepare_wannier90(self, folder):
     # Tries to get the precode input paramters
     try:
         # precode_parameters = inputdict.pop(self.get_linkname('overlap_parameters'))
-        precode_parameters = self.inputs.wannier90_parameters
+        precode_parameters = self.inputs.overlap_parameters
     except:
         precode_parameters = orm.Dict(dict={})
     # if not isinstance(precode_parameters, orm.Dict):

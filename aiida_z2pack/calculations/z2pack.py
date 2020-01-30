@@ -23,7 +23,7 @@ import six
 import copy
 
 from aiida import orm
-# from aiida.engine import CalcJob
+from aiida.engine import CalcJob
 from aiida.plugins import CalculationFactory
 from aiida.common import datastructures, exceptions
 from aiida.orm.nodes.data.upf import get_pseudos_from_structure
@@ -32,7 +32,8 @@ from .utils import prepare_nscf, prepare_wannier90, prepare_z2pack
 
 PwCalculation = CalculationFactory('quantumespresso.pw')
 
-bases = [PwCalculation,]
+# bases = [PwCalculation,]
+bases = [CalcJob]
 
 class Z2packCalculation(*bases):
     """
@@ -92,7 +93,7 @@ class Z2packCalculation(*bases):
     _DEFAULT_MOVE_TOLERANCE = 0.3
     _DEFAULT_POS_TOLERANCE = 0.01
     # _blocked_keywords = PwCalculation._blocked_keywords + [['length_unit','ang']]
-    _blocked_keywords = [y for x in bases for y in x._blocked_keywords] + [('length_unit','ang')]
+    # _blocked_keywords = [y for x in bases for y in x._blocked_keywords] + [('length_unit','ang')]
     _blocked_precode_keywords = []
 
     @classmethod
@@ -107,15 +108,15 @@ class Z2packCalculation(*bases):
         #     help='Optional van der Waals table contained in a `SinglefileData`.')
 
         spec.input(
-            'nscf_parameters', valid_type=orm.Dict, dynamic=True,
+            'nscf_parameters', valid_type=orm.Dict,
             help='Dict: Input parameters for the nscf code (pw)'
             )
         spec.input(
-            'overlap_parameters', valid_type=orm.Dict, dynamic=True, required=False,
+            'overlap_parameters', valid_type=orm.Dict, required=False,
             help='Dict: Input parameters for the overlap code (pw2wannier)'
             )
         spec.input(
-            'wannier90_parameters', valid_type=orm.Dict, dynamic=True,
+            'wannier90_parameters', valid_type=orm.Dict,
             help='Dict: Input parameters for the wannier code (wannier90)'
             )
         spec.input(
@@ -127,7 +128,9 @@ class Z2packCalculation(*bases):
             help='Overlap code to be used by z2pack.'
             )
         spec.input(
-            'wannier90_code', valid_type=orm.Code, required=True,
+            'wannier90_code', valid_type=orm.Code, 
+            # required=True,
+            required=False,
             help='Wannier code to be used by z2pack.'
             )
         spec.input('metadata.options.nscf_parser_name', valid_type=six.string_types, default='quantumespresso.pw')
