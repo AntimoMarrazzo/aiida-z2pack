@@ -3,63 +3,21 @@
     "author_email": "developers@aiida.net",
     "classifiers": [
         "License :: OSI Approved :: MIT License",
-        // "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3.6",
         "Development Status :: 4 - Beta"
     ],
     "description": "The official AiiDA plugin for z2pack",
     "entry_points": {
         "aiida.calculations": [
-            "z2pack = aiida_z2pack.calculations.z2pack:Z2packCalculation",
+            "z2pack = aiida_z2pack.calculations.z2pack:Z2packCalculation"
         ],
-        // "aiida.data": [
-        //     "quantumespresso.force_constants = aiida_quantumespresso.data.force_constants:ForceConstantsData"
-        // ],
         "aiida.parsers": [
-            "z2pack = aiida_z2pack.parsers.z2pack:Z2packParser",
-        ],
-        // "aiida.workflows": [
-        //     "quantumespresso.ph.base = aiida_quantumespresso.workflows.ph.base:PhBaseWorkChain",
-        //     "quantumespresso.pw.base = aiida_quantumespresso.workflows.pw.base:PwBaseWorkChain",
-        //     "quantumespresso.pw.relax = aiida_quantumespresso.workflows.pw.relax:PwRelaxWorkChain",
-        //     "quantumespresso.pw.bands = aiida_quantumespresso.workflows.pw.bands:PwBandsWorkChain",
-        //     "quantumespresso.pw.band_structure = aiida_quantumespresso.workflows.pw.band_structure:PwBandStructureWorkChain",
-        //     "quantumespresso.pw.unfolding = aiida_quantumespresso.workflows.pw.unfolding:PwUnfoldingWorkChain",
-        //     "quantumespresso.q2r.base = aiida_quantumespresso.workflows.q2r.base:Q2rBaseWorkChain",
-        //     "quantumespresso.matdyn.base = aiida_quantumespresso.workflows.matdyn.base:MatdynBaseWorkChain"
-        // ],
-        // "console_scripts": [
-        //     "aiida-quantumespresso = aiida_quantumespresso.cli:cmd_root"
-        // ]
+            "z2pack = aiida_z2pack.parsers.z2pack:Z2packParser"
+        ]
     },
-    // "extras_require": {
-    //     "dev": [
-    //         "pre-commit==1.17.0",
-    //         "prospector==1.1.7",
-    //         "pylint==1.9.4; python_version<'3.0'",
-    //         "pylint==2.3.1; python_version>='3.0'",
-    //         "pgtest==1.2.0",
-    //         "pytest==3.6.3",
-    //         "pytest-regressions==1.0.6",
-    //         "yapf==0.28.0"
-    //     ],
-    //     "tcod": [
-    //         "aiida-tcod"
-    //     ],
-    //     "docs": [
-    //         "Sphinx",
-    //         "docutils",
-    //         "sphinx_rtd_theme"
-    //     ]
-    // },
     "install_requires": [
         "numpy",
-        "z2pack",
-        // "aiida_core[atomic_tools]>=1.0.0,<2.0.0",
-        // "matplotlib<3.0.0; python_version<'3'",
-        // "packaging",
-        // "qe-tools==1.1.3",
-        // "xmlschema==1.0.13"
+        "z2pack"
     ],
     "license": "MIT License",
     "name": "aiida_z2pack",

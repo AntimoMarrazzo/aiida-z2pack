@@ -132,30 +132,46 @@ class Z2packCalculation(*bases):
             )
         spec.input('metadata.options.nscf_parser_name', valid_type=six.string_types, default='quantumespresso.pw')
 
+        spec.output(
+            'output_parameters', valid_type=orm.Dict, required=True,
+            help='The `output_parameters` output node of the successful calculation.'
+            )
+
     def prepare_for_submission(self, folder):
         calcinfo_nscf    = PwCalculation.prepare_for_submission(self, folder)
-        calcinfo_wannier = None
+        calcinfo_wannier = prepare_wannier90(self, folder)
         calcinfo_z2pack  = prepare_z2pack(self, folder)
         # super(Z2packCalculation, self).prepare_for_submission(folder)
 
         # codeinfo = datastructures.orm.CodeInfo()
-        # codeinfo.cmdline_params = self.inputs.parameters.cmdline_params(
-        #     file1_name=self.inputs.file1.filename,
-        #     file2_name=self.inputs.file2.filename)
+        # # codeinfo.cmdline_params = self.inputs.parameters.cmdline_params(
+        # #     file1_name=self.inputs.file1.filename,
+        # #     file2_name=self.inputs.file2.filename)
         # codeinfo.code_uuid = self.inputs.code.uuid
-        # codeinfo.stdout_name = self.metadata.options.output_filename
+        # # codeinfo.stdout_name = self.metadata.options.output_filename
         # codeinfo.withmpi = self.inputs.metadata.options.withmpi
 
         # # Prepare a `CalcInfo` to be returned to the engine
         # calcinfo = datastructures.CalcInfo()
         # calcinfo.codes_info = [codeinfo]
-        # calcinfo.local_copy_list = [
-        #     (self.inputs.file1.uuid, self.inputs.file1.filename, self.inputs.file1.filename),
-        #     (self.inputs.file2.uuid, self.inputs.file2.filename, self.inputs.file2.filename),
-        # ]
-        # calcinfo.retrieve_list = [self.metadata.options.output_filename]
+        # # calcinfo.local_copy_list = [
+        # #     (self.inputs.file1.uuid, self.inputs.file1.filename, self.inputs.file1.filename),
+        # #     (self.inputs.file2.uuid, self.inputs.file2.filename, self.inputs.file2.filename),
+        # # ]
+        # # calcinfo.retrieve_list = [self.metadata.options.output_filename]
 
-        # return calcinfo
+        calcinfo = calcinfo_nscf
+
+        calcinfo.retrieve_list.append(self._DEFAULT_INPUT_FILE)
+        calcinfo.retrieve_list.append(self._INPUT_W90_FILE_NAME)
+        calcinfo.retrieve_list.append(self._INPUT_OVERLAP_FILE_NAME)
+        calcinfo.retrieve_list.append(self._OUTPUT_OVERLAP_FILE_NAME)
+        calcinfo.retrieve_list.append(self._DEFAULT_OUTPUT_FILE)
+        calcinfo.retrieve_list.append(self._DEFAULT_OUTPUT_Z2PACK)
+        calcinfo.retrieve_list.append(self._DEFAULT_OUTPUT_RESULTS_Z2PACK)
+        calcinfo.retrieve_list.append(self._ERROR_FILE_NAME)
+
+        return calcinfo
 
     @classmethod
     def _get_linkname_pseudo_prefix(cls):
