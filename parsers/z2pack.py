@@ -1,18 +1,14 @@
 # -*- coding: utf-8 -*-
-from aiida.orm.calculation.job.z2pack import Z2packCalculation
-from aiida.parsers.parser import Parser
-#from aiida.common.datastructures import calc_states
-from aiida.parsers.exceptions import OutputParsingError
 import json
-from aiida.orm.data.parameter import ParameterData
-from aiida.orm.data.array.bands import BandsData
-from aiida.orm.data.array.kpoints import KpointsData
-from __builtin__ import True
+from aiida.common import exceptions
+from aiida.parsers.parser import Parser
+from aiida.plugins import DataFactory, CalculationFactory
 
-__authors__ = "Antimo Marrazzo and The AiiDA team."
-__copyright__ = u"Copyright (c), This file is part of the AiiDA platform. For further information please visit http://www.aiida.net/.. All rights reserved."
-__license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.6.0"
+Dict              = DataFactory('dict')
+KpointsData       = DataFactory('array.kpoints')
+BandsData         = DataFactory('array.bands')
+Z2packCalculation = CalculationFactory('z2pack')
+
 
 class Z2packParser(Parser):
     """
@@ -26,12 +22,11 @@ class Z2packParser(Parser):
         Initialize the instance of Z2pack parser
         """
         # check for valid input
-        if not isinstance(calculation,Z2packCalculation):
-            raise OutputParsingError("Input must calc must be a "
-                                     "Z2packCalculation")
+        if not isinstance(calculation, Z2packCalculation):
+            raise exceptions.OutputParsingError(
+                "Input must calc must be a Z2packCalculation")
         super(Z2packParser, self).__init__(calculation)
           
-            
     def parse_with_retrieved(self, retrieved):
         """
         Parses the datafolder, stores results.

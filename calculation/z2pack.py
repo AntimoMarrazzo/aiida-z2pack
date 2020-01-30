@@ -32,29 +32,6 @@ from .utils import prepare_nscf, prepare_wannier90, prepare_z2pack
 
 PwCalculation = CalculationFactory('quantumespresso.pw')
 
-def _wann_site_format(structure_sites):
-    '''
-    Generates site locations and cell dimensions
-    in a manner that can be used by the wannier90 input script
-    '''
-    def list2str(list_item):
-        '''
-        Converts an input list item into a str
-        '''
-        list_item = copy.deepcopy(list_item)
-        if isinstance(list_item, str):
-            return list_item
-        else:
-            return ' ' + ' '.join([str(_) for _ in list_item]) + ' '
-    
-    calc_positions = []
-    calc_kind_names = []
-    for i in range(len(structure_sites)):
-        calc_positions.append(list2str(structure_sites[i].position))
-        calc_kind_names.append(structure_sites[i].kind_name)
-    return calc_positions, calc_kind_names
-
-
 bases = [PwCalculation,]
 
 class Z2packCalculation(*bases):
@@ -115,7 +92,7 @@ class Z2packCalculation(*bases):
     _DEFAULT_MOVE_TOLERANCE = 0.3
     _DEFAULT_POS_TOLERANCE = 0.01
     # _blocked_keywords = PwCalculation._blocked_keywords + [['length_unit','ang']]
-    _blocked_keywords = [y for x in bases for y in x._blocked_keywords] + [['length_unit','ang']]
+    _blocked_keywords = [y for x in bases for y in x._blocked_keywords] + [('length_unit','ang')]
     _blocked_precode_keywords = []
 
     @classmethod
@@ -129,28 +106,28 @@ class Z2packCalculation(*bases):
         # spec.input('vdw_table', valid_type=orm.SinglefileData, required=False,
         #     help='Optional van der Waals table contained in a `SinglefileData`.')
 
-        spec.input_namespace(
+        spec.input(
             'nscf_parameters', valid_type=orm.Dict, dynamic=True,
             help='Dict: Input parameters for the nscf code (pw)'
             )
-        spec.input_namespace(
-            'overlap_parameters', valid_type=orm.Dict, dynamic=True,
+        spec.input(
+            'overlap_parameters', valid_type=orm.Dict, dynamic=True, required=False,
             help='Dict: Input parameters for the overlap code (pw2wannier)'
             )
-        spec.input_namespace(
+        spec.input(
             'wannier90_parameters', valid_type=orm.Dict, dynamic=True,
             help='Dict: Input parameters for the wannier code (wannier90)'
             )
         spec.input(
-            'nscf_code', valid_type=orm.Code, required=False,
+            'nscf_code', valid_type=orm.Code, required=True,
             help='NSCF code to be used by z2pack.'
             )
         spec.input(
-            'overlap_code', valid_type=orm.Code, required=False,
+            'overlap_code', valid_type=orm.Code, required=True,
             help='Overlap code to be used by z2pack.'
             )
         spec.input(
-            'wannier90_code', valid_type=orm.Code, required=False,
+            'wannier90_code', valid_type=orm.Code, required=True,
             help='Wannier code to be used by z2pack.'
             )
         spec.input('metadata.options.nscf_parser_name', valid_type=six.string_types, default='quantumespresso.pw')
@@ -161,24 +138,24 @@ class Z2packCalculation(*bases):
         calcinfo_z2pack  = prepare_z2pack(self, folder)
         # super(Z2packCalculation, self).prepare_for_submission(folder)
 
-        codeinfo = datastructures.orm.CodeInfo()
-        codeinfo.cmdline_params = self.inputs.parameters.cmdline_params(
-            file1_name=self.inputs.file1.filename,
-            file2_name=self.inputs.file2.filename)
-        codeinfo.code_uuid = self.inputs.code.uuid
-        codeinfo.stdout_name = self.metadata.options.output_filename
-        codeinfo.withmpi = self.inputs.metadata.options.withmpi
+        # codeinfo = datastructures.orm.CodeInfo()
+        # codeinfo.cmdline_params = self.inputs.parameters.cmdline_params(
+        #     file1_name=self.inputs.file1.filename,
+        #     file2_name=self.inputs.file2.filename)
+        # codeinfo.code_uuid = self.inputs.code.uuid
+        # codeinfo.stdout_name = self.metadata.options.output_filename
+        # codeinfo.withmpi = self.inputs.metadata.options.withmpi
 
-        # Prepare a `CalcInfo` to be returned to the engine
-        calcinfo = datastructures.CalcInfo()
-        calcinfo.codes_info = [codeinfo]
-        calcinfo.local_copy_list = [
-            (self.inputs.file1.uuid, self.inputs.file1.filename, self.inputs.file1.filename),
-            (self.inputs.file2.uuid, self.inputs.file2.filename, self.inputs.file2.filename),
-        ]
-        calcinfo.retrieve_list = [self.metadata.options.output_filename]
+        # # Prepare a `CalcInfo` to be returned to the engine
+        # calcinfo = datastructures.CalcInfo()
+        # calcinfo.codes_info = [codeinfo]
+        # calcinfo.local_copy_list = [
+        #     (self.inputs.file1.uuid, self.inputs.file1.filename, self.inputs.file1.filename),
+        #     (self.inputs.file2.uuid, self.inputs.file2.filename, self.inputs.file2.filename),
+        # ]
+        # calcinfo.retrieve_list = [self.metadata.options.output_filename]
 
-        return calcinfo
+        # return calcinfo
 
     @classmethod
     def _get_linkname_pseudo_prefix(cls):
