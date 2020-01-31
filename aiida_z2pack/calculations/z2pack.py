@@ -29,13 +29,8 @@ class Z2packCalculation(*bases):
     Plugin for Z2pack, a code for computing topological invariants.
     See http://z2pack.ethz.ch/ for more details
     """
-    _PSEUDO_SUBFOLDER = './pseudo/'
+    # _PSEUDO_SUBFOLDER = './pseudo/'
     _OUTPUT_SUBFOLDER = './out/'
-    # _PREFIX = 'aiida'
-    _INPUT_NSCF_FILE_NAME = 'aiida.nscf.in'
-    _OUTPUT_NSCF_FILE_NAME = 'aiida.nscf.out'
-    # _DATAFILE_XML_PRE_6_2 = 'data-file.xml'
-    # _DATAFILE_XML_POST_6_2 = 'data-file-schema.xml'
     _Z2pack_folder = './'
     _Z2pack_folder_restart_files=[]
 
@@ -54,39 +49,48 @@ class Z2packCalculation(*bases):
     # in restarts, it will copy the previous folder in the following one
     _restart_copy_to_z2pack = _Z2pack_folder
     # Default verbosity; change in subclasses
-    _default_verbosity = 'high'
+    # _default_verbosity = 'high'
 
-    _use_kpoints = False
+    # _use_kpoints = False
     # _DEFAULT_OUTPUT_FILE = 'z2pack_aiida.out'
-    _DEFAULT_INPUT_SCF='aiida.scf.in'
-    _DEFAULT_OUTPUT_SCF='aiida.scf.out'
-    _DEFAULT_INPUT_NSCF='aiida.nscf.in'
-    _DEFAULT_OUTPUT_NSCF='aiida.nscf.out'
-    _DEFAULT_INPUT_Z2PACK='z2pack_aiida.py'
-    _DEFAULT_OUTPUT_Z2PACK = 'aiida.json'
-    _DEFAULT_OUTPUT_RESULTS_Z2PACK = 'results.json'
-    _INPUT_W90_FILE_NAME = 'aiida.win'
-    _OUTPUT_W90_FILE_NAME = 'aiida.wout'
-    _ERROR_FILE_NAME = 'aiida.werr'
-    _INPUT_OVERLAP_FILE_NAME = 'aiida.pw2wan.in'
-    _OUTPUT_OVERLAP_FILE_NAME = 'aiida.pw2wan.out'
-    _PREFIX = 'aiida'
-    _SEEDNAME = 'aiida'
-    _default_parser = 'z2pack'  
-    _INPUT_SUBFOLDER = "./out/"
-    _ALWAYS_SYM_FILES = ['UNK*', '*.mmn']
-    _RESTART_SYM_FILES = ['*.amn','*.eig']
-    _CHK_FILE = '*.chk'
-    _DEFAULT_INIT_ONLY = False
-    _DEFAULT_WRITE_UNK = False
+    # _OUTPUT_Z2PACK_FILE  = 'aiida.json'
+    _INPUT_PW_SCF_FILE   = 'aiida.scf.in'
+    _OUTPUT_PW_SCF_FILE  = 'aiida.scf.out'
+
+    _INPUT_PW_NSCF_FILE  = 'aiida.nscf.in'
+    _OUTPUT_PW_NSCF_FILE = 'aiida.nscf.out'
+
+    _INPUT_Z2PACK_FILE   = 'z2pack_aiida.py'
+    _OUTPUT_Z2PACK_FILE  = 'z2pack_aiida.out'
+    _OUTPUT_SAVE_FILE    = 'save.json'
+    _OUTPUT_RESULT_FILE  = 'results.json'
+
+    _INPUT_W90_FILE      = 'aiida.win'
+    _OUTPUT_W90_FILE     = 'aiida.wout'
+
+    _INPUT_OVERLAP_FILE  = 'aiida.pw2wan.in'
+    _OUTPUT_OVERLAP_FILE = 'aiida.pw2wan.out'
+
+    _ERROR_FILE          = 'aiida.werr'
+
+    _PREFIX              = 'aiida'
+    _SEEDNAME            = 'aiida'
+    _default_parser      = 'z2pack'  
+    _INPUT_SUBFOLDER     = "./out/"
+    _ALWAYS_SYM_FILES    = ['UNK*', '*.mmn']
+    _RESTART_SYM_FILES   = ['*.amn','*.eig']
+    _CHK_FILE            = '*.chk'
+    _DEFAULT_INIT_ONLY   = False
+    _DEFAULT_WRITE_UNK   = False
+
     _DEFAULT_MIN_NEIGHBOUR_DISTANCE = 0.01
-    _DEFAULT_NUM_LINES = 11
-    _DEFAULT_ITERATOR = 'range(8, 27, 2)'
-    _DEFAULT_GAP_TOLERANCE = 0.3
+    _DEFAULT_NUM_LINES              = 11
+    _DEFAULT_ITERATOR               = 'range(8, 27, 2)'
+
+    _DEFAULT_GAP_TOLERANCE  = 0.3
     _DEFAULT_MOVE_TOLERANCE = 0.3
-    _DEFAULT_POS_TOLERANCE = 0.01
-    # _blocked_keywords = PwCalculation._blocked_keywords + [['length_unit','ang']]
-    # _blocked_keywords = [y for x in bases for y in x._blocked_keywords] + [('length_unit','ang')]
+    _DEFAULT_POS_TOLERANCE  = 0.01
+
     _blocked_keywords_pw = PwCalculation._blocked_keywords
     _blocked_keywords_overlap = [
         ('INPUTPP', 'outdir', _OUTPUT_SUBFOLDER),
@@ -103,27 +107,15 @@ class Z2packCalculation(*bases):
     @classmethod
     def define(cls, spec):
         super(Z2packCalculation, cls).define(spec)
-        # spec.input('metadata.options.input_filename', valid_type=six.string_types, default=cls._DEFAULT_INPUT_FILE)
-        # spec.input('metadata.options.output_filename', valid_type=six.string_types, default=cls._DEFAULT_OUTPUT_FILE)
-        # spec.input('metadata.options.withmpi', valid_type=bool, default=True)  # Override default withmpi=False
-        # spec.input('parameters', valid_type=orm.Dict,
-        #     help='The input parameters that are to be used to construct the input file.')
-        # spec.input('vdw_table', valid_type=orm.SinglefileData, required=False,
-        #     help='Optional van der Waals table contained in a `SinglefileData`.')
 
         spec.input(
-            'parameters', valid_type=orm.Dict, 
-            default=orm.Dict(dict={}),
-            help='The input parameters that are to be used to construct the input file.'
+            'structure', valid_type=orm.StructureData,
+            help='The input structure.'
             )
-        spec.input('structure', valid_type=orm.StructureData,
-            help='The input structure.')
-        # spec.input('parent_folder', valid_type=orm.RemoteData, required=False,
-        #     help='An optional working directory of a previously completed calculation to restart from.')
-        # spec.input('vdw_table', valid_type=orm.SinglefileData, required=False,
-        #     help='Optional van der Waals table contained in a `SinglefileData`.')
-        spec.input_namespace('pseudos', valid_type=orm.UpfData, dynamic=True,
-            help='A mapping of `UpfData` nodes onto the kind name to which they should apply.')
+        spec.input_namespace(
+            'pseudos', valid_type=orm.UpfData, dynamic=True,
+            help='A mapping of `UpfData` nodes onto the kind name to which they should apply.'
+            )
         spec.input(
             'pw_parameters', valid_type=orm.Dict,
             required=True,
@@ -138,11 +130,6 @@ class Z2packCalculation(*bases):
             'wannier90_parameters', valid_type=orm.Dict,
             required=True,
             help='Dict: Input parameters for the wannier code (wannier90).'
-            )
-        spec.input(
-            'settings', valid_type=orm.Dict,
-            default=orm.Dict(dict={}),
-            help='Use an additional node for special settings.'
             )
         spec.input(
             'pw_settings', valid_type=orm.Dict,
@@ -179,7 +166,15 @@ class Z2packCalculation(*bases):
             required=True,
             help='Wannier code to be used by z2pack.'
             )
-        spec.input('metadata.options.nscf_parser_name', valid_type=six.string_types, default='quantumespresso.pw')
+        spec.input(
+            'z2pack_code', valid_type=orm.Code, 
+            required=True,
+            help='Z2pack code.'
+            )
+        # spec.input(
+        #     'metadata.options.nscf_parser_name', valid_type=six.string_types, 
+        #     default='quantumespresso.pw'
+        #     )
 
         spec.output(
             'output_parameters', valid_type=orm.Dict, required=True,
@@ -187,17 +182,11 @@ class Z2packCalculation(*bases):
             )
 
     def prepare_for_submission(self, folder):
-        # print(folder.get_abs_path('.'))
-
         prepare_scf(self, folder)
         prepare_nscf(self, folder)
         prepare_overlap(self, folder)
-
         prepare_wannier90(self, folder)
-        # calcinfo_wannier = Wannier90Calculation.prepare_for_submission(self, folder)
-        calcinfo_wannier = prepare_wannier90(self, folder)
-        calcinfo_z2pack  = prepare_z2pack(self, folder)
-        # super(Z2packCalculation, self).prepare_for_submission(folder)
+        prepare_z2pack(self, folder)
 
         # codeinfo = datastructures.orm.CodeInfo()
         # # codeinfo.cmdline_params = self.inputs.parameters.cmdline_params(
@@ -216,26 +205,74 @@ class Z2packCalculation(*bases):
         # # ]
         # # calcinfo.retrieve_list = [self.metadata.options.output_filename]
 
+        ################################################################################3
+        # calcinfo = datastructures.CalcInfo()
+
+        # calcinfo.uuid = str(self.uuid)
+        # # Empty command line by default
+        # cmdline_params = settings.pop('CMDLINE', [])
+        # # we commented calcinfo.stin_name and added it here in cmdline_params
+        # # in this way the mpirun ... pw.x ... < aiida.in
+        # # is replaced by mpirun ... pw.x ... -in aiida.in
+        # # in the scheduler, _get_run_line, if cmdline_params is empty, it
+        # # simply uses < calcinfo.stin_name
+        # calcinfo.cmdline_params = (list(cmdline_params) + ['-in', self.metadata.options.input_filename])
+
+        # codeinfo = datastructures.CodeInfo()
+        # codeinfo.cmdline_params = (list(cmdline_params) + ['-in', self.metadata.options.input_filename])
+        # codeinfo.stdout_name = self.metadata.options.output_filename
+        # codeinfo.code_uuid = self.inputs.code.uuid
+        # calcinfo.codes_info = [codeinfo]
+
+        # calcinfo.local_copy_list = local_copy_list
+        # calcinfo.remote_copy_list = remote_copy_list
+        # calcinfo.remote_symlink_list = remote_symlink_list
+
+        # # Retrieve by default the output file and the xml file
+        # calcinfo.retrieve_list = []
+        # calcinfo.retrieve_list.append(self.metadata.options.output_filename)
+        # calcinfo.retrieve_list.extend(self.xml_filepaths)
+        # calcinfo.retrieve_list += settings.pop('ADDITIONAL_RETRIEVE_LIST', [])
+        # calcinfo.retrieve_list += self._internal_retrieve_list
+        ################################################################################
+
         # calcinfo = calcinfo_scf
         calcinfo = datastructures.CalcInfo()
-        calcinfo.retrieve_list = []
-        calcinfo.retrieve_temporary_list = []
-        calcinfo.local_copy_list = []
-        calcinfo.remote_symlink_list = []
 
-        # print('1:  ', calcinfo.retrieve_list)
-        # calcinfo.retrieve_list = []
-        # print('2:  ', calcinfo.retrieve_list)
-        calcinfo.retrieve_list.append(self._DEFAULT_INPUT_SCF)
-        calcinfo.retrieve_list.append(self._DEFAULT_INPUT_NSCF)
-        calcinfo.retrieve_list.append(self._DEFAULT_INPUT_Z2PACK)
-        calcinfo.retrieve_list.append(self._INPUT_W90_FILE_NAME)
-        calcinfo.retrieve_list.append(self._INPUT_OVERLAP_FILE_NAME)
-        # calcinfo.retrieve_list.append(self._OUTPUT_OVERLAP_FILE_NAME)
-        # calcinfo.retrieve_list.append(self._DEFAULT_OUTPUT_FILE)
-        calcinfo.retrieve_list.append(self._DEFAULT_OUTPUT_Z2PACK)
-        calcinfo.retrieve_list.append(self._DEFAULT_OUTPUT_RESULTS_Z2PACK)
-        calcinfo.retrieve_list.append(self._ERROR_FILE_NAME)
+        codeinfo = datastructures.CodeInfo()
+        codeinfo.cmdline_params = (['>', self._OUTPUT_Z2PACK_FILE])
+        codeinfo.stdout_name = self.metadata.options.output_filename
+        codeinfo.code_uuid = self.inputs.code.uuid
+        calcinfo.codes_info = [codeinfo]
+
+        calcinfo.retrieve_list           = []
+        calcinfo.retrieve_temporary_list = []
+        calcinfo.local_copy_list         = []
+        calcinfo.remote_symlink_list     = []
+
+        inputs = [
+            self._INPUT_PW_SCF_FILE,
+            self._INPUT_PW_NSCF_FILE,
+            self._INPUT_W90_FILE,
+            self._INPUT_OVERLAP_FILE,
+            self._INPUT_Z2PACK_FILE,
+            ]
+        outputs = [
+            self._OUTPUT_PW_SCF_FILE,
+            self._OUTPUT_PW_NSCF_FILE,
+            self._OUTPUT_W90_FILE,
+            self._OUTPUT_OVERLAP_FILE,
+            self._OUTPUT_Z2PACK_FILE,
+            self._OUTPUT_SAVE_FILE,
+            self._OUTPUT_RESULT_FILE,
+            ]
+        errors = [
+            self._ERROR_FILE
+            ]
+
+        calcinfo.retrieve_list.extend(inputs)
+        calcinfo.retrieve_list.extend(outputs)
+        calcinfo.retrieve_list.extend(errors)
 
         return calcinfo
 
@@ -367,10 +404,10 @@ class Z2packCalculation(*bases):
             remote_symlink_list=[]
             remote_copy_list=[]
                     
-            _internal_retrieve_list = [self._INPUT_NSCF_FILE_NAME,
-                                   self._INPUT_W90_FILE_NAME,
-                                   self._DEFAULT_OUTPUT_Z2PACK,
-                                   self._INPUT_OVERLAP_FILE_NAME,
+            _internal_retrieve_list = [self._INPUT_NSCF_FILE,
+                                   self._INPUT_W90_FILE,
+                                   self._OUTPUT_Z2PACK_FILE,
+                                   self._INPUT_OVERLAP_FILE,
                                    ]
             if parent_calc_folder is not None:
                 for file_copy in _internal_retrieve_list:
@@ -422,7 +459,7 @@ class Z2packCalculation(*bases):
         
         # Retrieve files
         calcinfo.retrieve_list = []
-        calcinfo.retrieve_list.append(self._DEFAULT_OUTPUT_Z2PACK)
+        calcinfo.retrieve_list.append(self._OUTPUT_Z2PACK_FILE)
         calcinfo.retrieve_list.append(self._DEFAULT_OUTPUT_FILE)
         calcinfo.retrieve_list.append(self._DEFAULT_OUTPUT_RESULTS_Z2PACK)
         

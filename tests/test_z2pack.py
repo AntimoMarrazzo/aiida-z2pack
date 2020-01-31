@@ -46,7 +46,8 @@ def test_z2pack_inputs(
         'wannier90_parameters': orm.Dict(dict=wannier90_parameters),
         'nscf_code': fixture_code('quantumespresso.pw'),
         'overlap_code': fixture_code('quantumespresso.pw2wannier90'),
-        'wannier90_code': fixture_code('quantumespresso.pw'),
+        'wannier90_code': fixture_code('wannier90.wannier90'),
+        'z2pack_code': fixture_code('z2pack'),
         'pseudos': {
             'Si': upf
         },
@@ -60,7 +61,9 @@ def test_z2pack_inputs(
     calc_info = generate_calc_job(fixture_sandbox, entry_point_name, inputs)
 
     inputs  = ['aiida.scf.in', 'aiida.nscf.in', 'aiida.pw2wan.in', 'aiida.win', 'z2pack_aiida.py']
-    outputs = ['aiida.json', 'results.json']
+    outputs = ['aiida.scf.out', 'aiida.nscf.out', 'aiida.pw2wan.out', 'aiida.wout', 'z2pack_aiida.out']
+    outputs += ['save.json', 'results.json']
+    # outputs = ['results.json']
     errors  = ['aiida.werr']
 
     # cmdline_params = ['-in', 'aiida.scf.in']

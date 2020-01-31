@@ -5,27 +5,27 @@ from aiida_quantumespresso.calculations import _uppercase_dict
 PwCalculation = CalculationFactory('quantumespresso.pw')
 PwCalculation._use_kpoints = False
 
-def prepare_pw(cls, folder, calculation):
+def _prepare_pw(cls, folder, calculation):
 	parameters = copy.deepcopy(cls.inputs.pw_parameters)
 
 	parameters['CONTROL']['calculation'] = calculation
 
 	arguments = [
 		parameters,
-		_uppercase_dict(cls.inputs.settings.get_dict(), dict_name='settings'),
+		_uppercase_dict(cls.inputs.pw_settings.get_dict(), dict_name='settings'),
 		cls.inputs.pseudos,
 		cls.inputs.structure,
 		]
 
 	input_filecontent, _ = PwCalculation._generate_PWCPinputdata(*arguments)
 
-	input_filename = getattr(cls, '_INPUT_PW_' + calculation.upper() + '_FILE')
+	input_filename = getattr(cls, '_INPUT_PW_{}_FILE'.format(calculation.upper()))
 
 	with folder.open(input_filename, 'w') as infile:
 		infile.write(input_filecontent)
 
 def prepare_scf(cls, folder):
-	prepare_pw(cls, folder, 'scf')
+	_prepare_pw(cls, folder, 'scf')
 
 def prepare_nscf(cls, folder):
-	prepare_pw(cls, folder, 'nscf')
+	_prepare_pw(cls, folder, 'nscf')
