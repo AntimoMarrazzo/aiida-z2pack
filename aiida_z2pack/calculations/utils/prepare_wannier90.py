@@ -7,12 +7,55 @@ from aiida import orm
 from aiida.common import exceptions
 from aiida.plugins import CalculationFactory
 from aiida_quantumespresso.calculations import _uppercase_dict, _lowercase_dict
-
-
+from aiida_wannier90.io import write_win
 
 PwCalculation = CalculationFactory('quantumespresso.pw')
 
+# num_bands   84   
+# exclude_bands   85-150
+# spinors         true
+# num_iter        0
+# use_bloch_phases    true
+# begin projections
+#     random
+# end projections
+# begin unit_cell_cart
+# Bohr
+#  1.528000000000000e1 0.000000000000000e0 0.000000000000000e0
+#  -7.640000000000000e0 1.323286816982716e1 0.000000000000000e0
+#  0.000000000000000e0 0.000000000000000e0 3.056000000000000e1
+# end unit_cell_cart
+# begin atoms_frac
+# Sn       0.000000000   0.000000000   2.546319032
+# Sn       0.500000000   0.288675135   2.509789310
+# Sn       0.000000000   0.577350269   2.250013317
+# Sn       0.172755916   0.250722055   2.348766500
+# Sn       0.630753738   0.591053357   2.348766500
+# Sn       0.196490377   0.890275366   2.348766500
+# end atoms_frac
+
 def prepare_wannier90(cls, folder):
+    input_filename = folder.get_abs_path(cls._INPUT_W90_FILE_NAME)
+    parameters = cls.inputs.wannier90_parameters.get_dict()
+
+    for k,v in cls._blocked_keywords_wannier90:
+        parameters[k] = v
+
+    write_win(
+        input_filename,
+        parameters,
+        structure = cls.inputs.structure,
+        random_projections=True
+        )
+
+
+    # input_filecontent, _ = PwCalculation._generate_PWCPinputdata(*arguments)
+
+    # input_filename = getattr(cls, '_DEFAULT_INPUT_' + calculation.upper())
+    # pass
+
+
+def old_prepare_wannier90(cls, folder):
     # inputdict=inputdict_wannier90
     # def _prepare_for_submission_wannier90(cls,folder, inputdict):        
     """

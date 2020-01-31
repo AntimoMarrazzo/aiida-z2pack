@@ -1,13 +1,19 @@
-length_unit = 'ang'
+length_unit = ang
 spinors = .true.
-Begin unit_cell_cart
+
+begin atoms_cart
+ang
+Si         0.0000000000       0.0000000000       0.0000000000 
+Si         1.3575000000       1.3575000000       1.3575000000 
+end atoms_cart
+
+begin projections
+random
+end projections
+
+begin unit_cell_cart
 ang
       2.7150000000       2.7150000000       0.0000000000
       2.7150000000       0.0000000000       2.7150000000
       0.0000000000       2.7150000000       2.7150000000
-End unit_cell_cart
-Begin atoms_cart
-ang
-Si   0.0 0.0 0.0 
-Si   1.3575 1.3575 1.3575 
-End atoms_cart
+end unit_cell_cart

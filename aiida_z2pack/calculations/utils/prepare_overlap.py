@@ -1,21 +1,16 @@
-# from aiida import orm
+from aiida_quantumespresso.calculations.namelists import NamelistsCalculation
 
-def prepare_overlap(cls):
-	# Filter blocked keyword without default value that would cause an exception in a NamelistsCalculation
-	# old_bk = cls._blocked_keywords
-	# new_bk = []
-	# for t in old_bk:
-	#     if len(t) == 3:
-	#         new_bk.append(t)
-	# cls._blocked_keywords = new_bk
+def prepare_overlap(cls,folder):
+	parameters = cls.inputs.overlap_parameters.get_dict()
+	blocked    = cls._blocked_keywords_overlap
+	namelists  = NamelistsCalculation._default_namelists
 
-	cls._blocked_keywords = cls._blocked_keywords_overlap
-	cls.inputs.metadata.options.input_filename = cls._INPUT_OVERLAP_FILE_NAME
-	cls.inputs.metadata.options.output_filename = cls._OUTPUT_OVERLAP_FILE_NAME
-	cls.inputs.parameters = cls.inputs.overlap_parameters
-	cls.inputs.settings = cls.inputs.overlap_settings
+	content = NamelistsCalculation.generate_input_file(parameters, namelists_toprint=namelists, blocked=blocked)
 
-	# return old_bk
+	input_filename = cls._INPUT_OVERLAP_FILE_NAME
+
+	with folder.open(input_filename, 'w') as infile:
+		infile.write(content)
 
 # &inputpp
 #   outdir='../tmp'

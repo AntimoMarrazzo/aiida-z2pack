@@ -14,7 +14,7 @@ from aiida_quantumespresso.calculations.namelists import NamelistsCalculation
 from .utils import prepare_scf, prepare_nscf, prepare_overlap, prepare_wannier90, prepare_z2pack
 
 PwCalculation           = CalculationFactory('quantumespresso.pw')
-# Wannier90Calculation    = CalculationFactory('wannier90.wannier90')
+Wannier90Calculation    = CalculationFactory('wannier90.wannier90')
 # Pw2wannier90Calculation = CalculationFactory('quantumespresso.pw2wannier90')
 
 bases = [
@@ -29,7 +29,7 @@ class Z2packCalculation(*bases):
     Plugin for Z2pack, a code for computing topological invariants.
     See http://z2pack.ethz.ch/ for more details
     """
-    # _PSEUDO_SUBFOLDER = './pseudo/'
+    _PSEUDO_SUBFOLDER = './pseudo/'
     _OUTPUT_SUBFOLDER = './out/'
     # _PREFIX = 'aiida'
     _INPUT_NSCF_FILE_NAME = 'aiida.nscf.in'
@@ -116,6 +116,14 @@ class Z2packCalculation(*bases):
             default=orm.Dict(dict={}),
             help='The input parameters that are to be used to construct the input file.'
             )
+        spec.input('structure', valid_type=orm.StructureData,
+            help='The input structure.')
+        # spec.input('parent_folder', valid_type=orm.RemoteData, required=False,
+        #     help='An optional working directory of a previously completed calculation to restart from.')
+        # spec.input('vdw_table', valid_type=orm.SinglefileData, required=False,
+        #     help='Optional van der Waals table contained in a `SinglefileData`.')
+        spec.input_namespace('pseudos', valid_type=orm.UpfData, dynamic=True,
+            help='A mapping of `UpfData` nodes onto the kind name to which they should apply.')
         spec.input(
             'pw_parameters', valid_type=orm.Dict,
             required=True,
@@ -181,17 +189,11 @@ class Z2packCalculation(*bases):
     def prepare_for_submission(self, folder):
         # print(folder.get_abs_path('.'))
 
-        prepare_scf(self)
-        calcinfo_scf = PwCalculation.prepare_for_submission(self, folder)
+        prepare_scf(self, folder)
+        prepare_nscf(self, folder)
+        prepare_overlap(self, folder)
 
-        prepare_nscf(self)
-        calcinfo_nscf = PwCalculation.prepare_for_submission(self, folder)
-
-        old_bk = prepare_overlap(self)
-        calcinfo_overlap = NamelistsCalculation.prepare_for_submission(self, folder)
-        self._blocked_keywords = old_bk
-
-        # prepare_wannier90(self, folder)
+        prepare_wannier90(self, folder)
         # calcinfo_wannier = Wannier90Calculation.prepare_for_submission(self, folder)
         calcinfo_wannier = prepare_wannier90(self, folder)
         calcinfo_z2pack  = prepare_z2pack(self, folder)
@@ -214,10 +216,15 @@ class Z2packCalculation(*bases):
         # # ]
         # # calcinfo.retrieve_list = [self.metadata.options.output_filename]
 
-        calcinfo = calcinfo_scf
+        # calcinfo = calcinfo_scf
+        calcinfo = datastructures.CalcInfo()
+        calcinfo.retrieve_list = []
+        calcinfo.retrieve_temporary_list = []
+        calcinfo.local_copy_list = []
+        calcinfo.remote_symlink_list = []
 
         # print('1:  ', calcinfo.retrieve_list)
-        calcinfo.retrieve_list = []
+        # calcinfo.retrieve_list = []
         # print('2:  ', calcinfo.retrieve_list)
         calcinfo.retrieve_list.append(self._DEFAULT_INPUT_SCF)
         calcinfo.retrieve_list.append(self._DEFAULT_INPUT_NSCF)
