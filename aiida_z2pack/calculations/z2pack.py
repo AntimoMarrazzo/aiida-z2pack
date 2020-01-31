@@ -1,22 +1,4 @@
 # -*- coding: utf-8 -*-
-# import copy, os
-# import numpy as np
-# from aiida.common.utils import classproperty
-# from aiida.common.exceptions import exceptions.InputValidationError, ModificationNotAllowed
-# from aiida.common.datastructures import CalcInfo, orm.CodeInfo, code_run_modes
-# from aiida.orm import JobCalculation, DataFactory
-# from aiida_quantumespresso.calculations import (
-#     _lowercase_dict, _uppercase_dict, get_input_data_text)
-# from aiida_quantumespresso.calculations.pw import PwCalculation
-# from aiida.orm.code import orm.Code
-# from aiida.orm.data.array.kpoints import KpointsData
-# from aiida.orm.data.upf import orm.UpfData
-# from aiida.orm.data.upf import get_pseudos_from_structure
-# from aiida.orm.data.orbital import OrbitalData, OrbitalFactory
-# from aiida.orm.data.parameter import orm.Dict
-# from aiida.orm.data.remote import orm.RemoteData
-# from aiida.orm.data.structure import orm.StructureData
-# from aiida.transport import Transport
 
 import os
 import six
@@ -27,13 +9,20 @@ from aiida.engine import CalcJob
 from aiida.plugins import CalculationFactory
 from aiida.common import datastructures, exceptions
 from aiida.orm.nodes.data.upf import get_pseudos_from_structure
+from aiida_quantumespresso.calculations.namelists import NamelistsCalculation
 
-from .utils import prepare_nscf, prepare_wannier90, prepare_z2pack
+from .utils import prepare_scf, prepare_nscf, prepare_overlap, prepare_wannier90, prepare_z2pack
 
-PwCalculation = CalculationFactory('quantumespresso.pw')
+PwCalculation           = CalculationFactory('quantumespresso.pw')
+# Wannier90Calculation    = CalculationFactory('wannier90.wannier90')
+# Pw2wannier90Calculation = CalculationFactory('quantumespresso.pw2wannier90')
 
-# bases = [PwCalculation,]
-bases = [CalcJob]
+bases = [
+    # Wannier90Calculation,
+    NamelistsCalculation,
+    PwCalculation
+    ]
+# bases = [CalcJob]
 
 class Z2packCalculation(*bases):
     """
@@ -41,7 +30,7 @@ class Z2packCalculation(*bases):
     See http://z2pack.ethz.ch/ for more details
     """
     # _PSEUDO_SUBFOLDER = './pseudo/'
-    # _OUTPUT_SUBFOLDER = './out/'
+    _OUTPUT_SUBFOLDER = './out/'
     # _PREFIX = 'aiida'
     _INPUT_NSCF_FILE_NAME = 'aiida.nscf.in'
     _OUTPUT_NSCF_FILE_NAME = 'aiida.nscf.out'
@@ -68,8 +57,12 @@ class Z2packCalculation(*bases):
     _default_verbosity = 'high'
 
     _use_kpoints = False
-    _DEFAULT_OUTPUT_FILE = 'z2pack_aiida.out'
-    _DEFAULT_INPUT_FILE='z2pack_aiida.py'
+    # _DEFAULT_OUTPUT_FILE = 'z2pack_aiida.out'
+    _DEFAULT_INPUT_SCF='aiida.scf.in'
+    _DEFAULT_OUTPUT_SCF='aiida.scf.out'
+    _DEFAULT_INPUT_NSCF='aiida.nscf.in'
+    _DEFAULT_OUTPUT_NSCF='aiida.nscf.out'
+    _DEFAULT_INPUT_Z2PACK='z2pack_aiida.py'
     _DEFAULT_OUTPUT_Z2PACK = 'aiida.json'
     _DEFAULT_OUTPUT_RESULTS_Z2PACK = 'results.json'
     _INPUT_W90_FILE_NAME = 'aiida.win'
@@ -94,7 +87,18 @@ class Z2packCalculation(*bases):
     _DEFAULT_POS_TOLERANCE = 0.01
     # _blocked_keywords = PwCalculation._blocked_keywords + [['length_unit','ang']]
     # _blocked_keywords = [y for x in bases for y in x._blocked_keywords] + [('length_unit','ang')]
-    _blocked_precode_keywords = []
+    _blocked_keywords_pw = PwCalculation._blocked_keywords
+    _blocked_keywords_overlap = [
+        ('INPUTPP', 'outdir', _OUTPUT_SUBFOLDER),
+        ('INPUTPP', 'prefix', _PREFIX),
+        ('INPUTPP', 'seedname', _SEEDNAME),
+        ('INPUTPP', 'write_amn', False),
+        ('INPUTPP', 'write_mmn', True),
+        ]
+    _blocked_keywords_wannier90 = [
+        ('length_unit','ang'),
+        ('spinors', True)
+        ]
 
     @classmethod
     def define(cls, spec):
@@ -108,29 +112,63 @@ class Z2packCalculation(*bases):
         #     help='Optional van der Waals table contained in a `SinglefileData`.')
 
         spec.input(
-            'nscf_parameters', valid_type=orm.Dict,
-            help='Dict: Input parameters for the nscf code (pw)'
+            'parameters', valid_type=orm.Dict, 
+            default=orm.Dict(dict={}),
+            help='The input parameters that are to be used to construct the input file.'
             )
         spec.input(
-            'overlap_parameters', valid_type=orm.Dict, required=False,
-            help='Dict: Input parameters for the overlap code (pw2wannier)'
+            'pw_parameters', valid_type=orm.Dict,
+            required=True,
+            help='Dict: Input parameters for the nscf code (pw).'
+            )
+        spec.input(
+            'overlap_parameters', valid_type=orm.Dict, 
+            default=orm.Dict(dict={}),
+            help='Dict: Input parameters for the overlap code (pw2wannier).'
             )
         spec.input(
             'wannier90_parameters', valid_type=orm.Dict,
-            help='Dict: Input parameters for the wannier code (wannier90)'
+            required=True,
+            help='Dict: Input parameters for the wannier code (wannier90).'
             )
         spec.input(
-            'nscf_code', valid_type=orm.Code, required=True,
+            'settings', valid_type=orm.Dict,
+            default=orm.Dict(dict={}),
+            help='Use an additional node for special settings.'
+            )
+        spec.input(
+            'pw_settings', valid_type=orm.Dict,
+            default=orm.Dict(dict={}),
+            help='Use an additional node for special settings.'
+            )
+        spec.input(
+            'overlap_settings', valid_type=orm.Dict,
+            default=orm.Dict(dict={}),
+            help='Use an additional node for special settings.'
+            )
+        spec.input(
+            'wannier90_settings', valid_type=orm.Dict,
+            default=orm.Dict(dict={}),
+            help='Use an additional node for special settings.'
+            )
+        spec.input(
+            'z2pack_settings', valid_type=orm.Dict, 
+            required=True,
+            help='Use an additional node for special settings.'
+            )
+        spec.input(
+            'nscf_code', valid_type=orm.Code,
+            required=True,
             help='NSCF code to be used by z2pack.'
             )
         spec.input(
-            'overlap_code', valid_type=orm.Code, required=True,
+            'overlap_code', valid_type=orm.Code,
+            required=True,
             help='Overlap code to be used by z2pack.'
             )
         spec.input(
             'wannier90_code', valid_type=orm.Code, 
-            # required=True,
-            required=False,
+            required=True,
             help='Wannier code to be used by z2pack.'
             )
         spec.input('metadata.options.nscf_parser_name', valid_type=six.string_types, default='quantumespresso.pw')
@@ -141,7 +179,20 @@ class Z2packCalculation(*bases):
             )
 
     def prepare_for_submission(self, folder):
-        calcinfo_nscf    = PwCalculation.prepare_for_submission(self, folder)
+        # print(folder.get_abs_path('.'))
+
+        prepare_scf(self)
+        calcinfo_scf = PwCalculation.prepare_for_submission(self, folder)
+
+        prepare_nscf(self)
+        calcinfo_nscf = PwCalculation.prepare_for_submission(self, folder)
+
+        old_bk = prepare_overlap(self)
+        calcinfo_overlap = NamelistsCalculation.prepare_for_submission(self, folder)
+        self._blocked_keywords = old_bk
+
+        # prepare_wannier90(self, folder)
+        # calcinfo_wannier = Wannier90Calculation.prepare_for_submission(self, folder)
         calcinfo_wannier = prepare_wannier90(self, folder)
         calcinfo_z2pack  = prepare_z2pack(self, folder)
         # super(Z2packCalculation, self).prepare_for_submission(folder)
@@ -163,57 +214,24 @@ class Z2packCalculation(*bases):
         # # ]
         # # calcinfo.retrieve_list = [self.metadata.options.output_filename]
 
-        calcinfo = calcinfo_nscf
+        calcinfo = calcinfo_scf
 
-        calcinfo.retrieve_list.append(self._DEFAULT_INPUT_FILE)
+        # print('1:  ', calcinfo.retrieve_list)
+        calcinfo.retrieve_list = []
+        # print('2:  ', calcinfo.retrieve_list)
+        calcinfo.retrieve_list.append(self._DEFAULT_INPUT_SCF)
+        calcinfo.retrieve_list.append(self._DEFAULT_INPUT_NSCF)
+        calcinfo.retrieve_list.append(self._DEFAULT_INPUT_Z2PACK)
         calcinfo.retrieve_list.append(self._INPUT_W90_FILE_NAME)
         calcinfo.retrieve_list.append(self._INPUT_OVERLAP_FILE_NAME)
-        calcinfo.retrieve_list.append(self._OUTPUT_OVERLAP_FILE_NAME)
-        calcinfo.retrieve_list.append(self._DEFAULT_OUTPUT_FILE)
+        # calcinfo.retrieve_list.append(self._OUTPUT_OVERLAP_FILE_NAME)
+        # calcinfo.retrieve_list.append(self._DEFAULT_OUTPUT_FILE)
         calcinfo.retrieve_list.append(self._DEFAULT_OUTPUT_Z2PACK)
         calcinfo.retrieve_list.append(self._DEFAULT_OUTPUT_RESULTS_Z2PACK)
         calcinfo.retrieve_list.append(self._ERROR_FILE_NAME)
 
         return calcinfo
 
-    @classmethod
-    def _get_linkname_pseudo_prefix(cls):
-        """
-        The prefix for the name of the link used for each pseudo before the kind name
-        """
-        return "pseudo_"
-
-    @classmethod
-    def _get_linkname_pseudo(cls, kind):
-        """
-        The name of the link used for the pseudo for kind 'kind'.
-        It appends the pseudo name to the pseudo_prefix, as returned by the
-        _get_linkname_pseudo_prefix() method.
-
-        :note: if a list of strings is given, the elements are appended
-          in the same order, separated by underscores
-
-        :param kind: a string (or list of strings) for the atomic kind(s) for
-            which we want to get the link name
-        """
-        # If it is a list of strings, and not a single string: join them
-        # by underscore
-        if isinstance(kind, (tuple, list)):
-            suffix_string = "_".join(kind)
-        elif isinstance(kind, str):
-            suffix_string = kind
-        else:
-            raise TypeError("The parameter 'kind' of _get_linkname_pseudo can "
-                            "only be a string or a list of strings")
-        return "{}{}".format(cls._get_linkname_pseudo_prefix(), suffix_string)
-
-    def _if_pos(self, fixed):
-            """
-            Simple function that returns 0 if fixed is True, 1 otherwise.
-            Useful to convert from the boolean value of fixed_coords to the value required
-            by Quantum Espresso as if_pos.
-            """
-            return 0 if fixed else 1
     
     def use_pseudos_from_family(self, family_name):
         """

@@ -1,0 +1,7 @@
+&INPUTPP
+  outdir = './out/'
+  prefix = 'aiida'
+  seedname = 'aiida'
+  write_amn = .false.
+  write_mmn = .true.
+/

@@ -1,8 +1,8 @@
 from aiida.common import exceptions
-from aiida_quantumespresso.calculations import _uppercase_dict
+from aiida_quantumespresso.calculations import _uppercase_dict, _lowercase_dict
 
 def prepare_z2pack(self, folder):
-    input_filename = folder.get_abs_path(self._DEFAULT_INPUT_FILE)
+    input_filename = folder.get_abs_path(self._DEFAULT_INPUT_Z2PACK)
     try:
         nscf_code = self.inputs.nscf_code
     except KeyError:
@@ -17,9 +17,9 @@ def prepare_z2pack(self, folder):
         raise exceptions.InputValidationError("No Wannier90 code specified for this calculation")
     
 
-    if 'settings' in self.inputs:
-        settings_dict = _uppercase_dict(self.inputs.settings.get_dict(), dict_name='settings')
-        settings_dict = self.inputs.settings.get_dict()
+    if 'z2pack_settings' in self.inputs:
+        settings_dict = _lowercase_dict(self.inputs.z2pack_settings.get_dict(), dict_name='z2pack_settings')
+        # settings_dict = self.inputs.settings.get_dict()
     else:
         raise exceptions.InputValidationError("No settings code specified for this calculation")          
 
@@ -61,7 +61,8 @@ def prepare_z2pack(self, folder):
 
     if dim_mode == '3D':
         try:
-            surface = settings_dict.get_dict()['surface']
+            surface = settings_dict['surface']
+            # surface = settings_dict.get_dict()['surface']
         except KeyError:
             raise exceptions.InputValidationError("A surface must be specified for dim_mode==3D ")
     

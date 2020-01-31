@@ -1,0 +1,13 @@
+length_unit = 'ang'
+spinors = .true.
+Begin unit_cell_cart
+ang
+      2.7150000000       2.7150000000       0.0000000000
+      2.7150000000       0.0000000000       2.7150000000
+      0.0000000000       2.7150000000       2.7150000000
+End unit_cell_cart
+Begin atoms_cart
+ang
+Si   0.0 0.0 0.0 
+Si   1.3575 1.3575 1.3575 
+End atoms_cart
