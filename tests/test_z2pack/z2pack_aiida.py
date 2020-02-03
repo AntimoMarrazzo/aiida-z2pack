@@ -8,9 +8,9 @@ import xml.etree.ElementTree as ET
 import json
 
 z2cmd =(
-    ' srun -n 1 /bin/true aiida  -pp;' +
-    ' srun -n 1 /bin/true< aiida.nscf.in>& pw.log;' +
-    ' srun -n 1 /bin/true< aiida.pw2wan.in >& pw2wan.log;'
+    ' mpirun -np 1 /bin/true aiida  -pp;' +
+    ' mpirun -np 1 /bin/true< aiida.nscf.in>& aiida.nscf.out;' +
+    ' mpirun -np 1 /bin/true< aiida.pw2wan.in >& aiida.pw2wan.out;'
 )
 
 input_files = ['aiida.nscf.in', 'aiida.pw2wan.in', 'aiida.win']
@@ -42,12 +42,12 @@ result = z2pack.surface.run(
 Chern = z2pack.invariant.chern(result)
 res_dict['invariant'].update({'Chern':Chern})
 
-gap_check['PASSED'] = result.convergence_report['surface']['GapCheck']['PASSED']
-gap_check['FAILED'] = result.convergence_report['surface']['GapCheck']['FAILED']
+gap_check['PASSED']  = result.convergence_report['surface']['GapCheck']['PASSED']
+gap_check['FAILED']  = result.convergence_report['surface']['GapCheck']['FAILED']
 move_check['PASSED'] = result.convergence_report['surface']['MoveCheck']['PASSED']
 move_check['FAILED'] = result.convergence_report['surface']['MoveCheck']['FAILED']
-pos_check['PASSED'] = result.convergence_report['line']['PosCheck']['PASSED']
-pos_check['FAILED'] = result.convergence_report['line']['PosCheck']['FAILED']
+pos_check['PASSED']  = result.convergence_report['line']['PosCheck']['PASSED']
+pos_check['FAILED']  = result.convergence_report['line']['PosCheck']['FAILED']
 pos_check['MISSING'] = result.convergence_report['line']['PosCheck']['MISSING']
 
 res_dict['convergence_report']['GapCheck'].update(gap_check)

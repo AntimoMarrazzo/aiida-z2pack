@@ -34,31 +34,19 @@ class Z2packParser(Parser):
         try:
             out_folder = self.retrieved
         except exceptions.NotExistent:
-            self.logger.error("No retrieved folder found")
-            successful = False
-            return
-            # return successful, new_nodes_list
-            # return self.exit(self.exit_codes.ERROR_NO_RETRIEVED_FOLDER)
-
+            return self.exit(self.exit_codes.ERROR_NO_RETRIEVED_FOLDER)
 
         # Checks for error output files
-        if self.node._ERROR_FILE_NAME in out_folder.list_object_names():
-            self.logger.error('Errors were found please check the retrieved '
-                              '{} file'.format(self.node._ERROR_FILE_NAME))
-            return
-            successful = False
-            # return successful, new_nodes_list
+        if self.node._ERROR_W90_FILE in out_folder.list_object_names():
+            return self.exit(self.exit_codes.ERROR_UNEXPECTED_FAILURE)
 
         try:
             filpath = out_folder.get_abs_path(
-                self.node._DEFAULT_OUTPUT_RESULTS_Z2PACK )
+                self.node._OUTPUT_RESULTS_FILE)
             with open(filpath, 'r') as fil:
-                    #out_file = fil.readlines()
                     data = json.load(fil)
         except OSError:
-            self.logger.error("Standard output file could not be found.")
-            successful = False
-            return successful, new_nodes_list
+            return self.exit(self.exit_codes.ERROR_MISSING_RESULTS_FILE)
 
         gap_f   = len(data['convergence_report']['GapCheck']['FAILED'])
         move_f  = len(data['convergence_report']['MoveCheck']['FAILED'])        
@@ -69,14 +57,12 @@ class Z2packParser(Parser):
         data['Tests_passed'] = success
         
         try:
-            filpath = out_folder.get_abs_path( self.node._DEFAULT_OUTPUT_FILE)
+            filpath = out_folder.get_abs_path( self.node._OUTPUT_Z2PACK_FILE)
             with open(filpath, 'r') as fil:
                     out_file = fil.readlines()
         except OSError:
-            self.logger.error("Standard output file {} could not be found.".format(self.node._DEFAULT_OUTPUT_FILE))
-            successful = False
-            return
-            # return successful, new_nodes_list
+            return self.exit(self.exit_codes.ERROR_MISSING_Z2PACK_OUTFILE)
+
         #out_file = out_file.split("\n")
         out_file = [i.strip('\n') for i in out_file]
         if successful:

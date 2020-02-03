@@ -207,7 +207,7 @@ def generate_parser():
 def generate_remote_data():
     """Return a `RemoteData` node."""
 
-    def _generate_remote_data(computer, remote_path, entry_point_name=None):
+    def _generate_remote_data(computer, remote_path, entry_point_name=None, extras_root=[]):
         """Return a `KpointsData` with a mesh of npoints in each direction."""
         from aiida.common.links import LinkType
         from aiida.orm import CalcJobNode, RemoteData
@@ -222,6 +222,10 @@ def generate_remote_data():
             creator = CalcJobNode(computer=computer, process_type=entry_point)
             creator.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
             remote.add_incoming(creator, link_type=LinkType.CREATE, link_label='remote_folder')
+
+            for extra in extras_root:
+                creator.add_incoming(extra[0], link_type=LinkType.INPUT_CALC, link_label=extra[1])
+                
             creator.store()
 
         return remote

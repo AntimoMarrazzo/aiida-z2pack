@@ -25,7 +25,9 @@ def _prepare_pw(cls, folder, calculation):
 		infile.write(input_filecontent)
 
 def prepare_scf(cls, folder):
+	PwCalculation._OUTPUT_SUBFOLDER = cls._OUTPUT_SUBFOLDER
 	_prepare_pw(cls, folder, 'scf')
 
 def prepare_nscf(cls, folder):
+	PwCalculation._OUTPUT_SUBFOLDER = cls._SCFTMP_SUBFOLDER
 	_prepare_pw(cls, folder, 'nscf')

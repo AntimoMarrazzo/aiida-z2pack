@@ -1,11 +1,16 @@
 from aiida_quantumespresso.calculations.namelists import NamelistsCalculation
 
+
 def prepare_overlap(cls,folder):
 	parameters = cls.inputs.overlap_parameters.get_dict()
 	blocked    = cls._blocked_keywords_overlap
-	namelists  = NamelistsCalculation._default_namelists
+	# namelists  = NamelistsCalculation._default_namelists
 
-	content = NamelistsCalculation.generate_input_file(parameters, namelists_toprint=namelists, blocked=blocked)
+	NamelistsCalculation._blocked_keywords = blocked
+
+	parameters = NamelistsCalculation._set_blocked_keywords(parameters)
+
+	content = NamelistsCalculation._generate_input_file(parameters)
 
 	input_filename = cls._INPUT_OVERLAP_FILE
 

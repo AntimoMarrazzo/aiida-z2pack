@@ -4,7 +4,7 @@ from aiida_quantumespresso.calculations import _uppercase_dict, _lowercase_dict
 def prepare_z2pack(cls, folder):
     input_filename = folder.get_abs_path(cls._INPUT_Z2PACK_FILE)
     try:
-        nscf_code = cls.inputs.nscf_code
+        pw_code = cls.inputs.pw_code
     except KeyError:
         raise exceptions.InputValidationError("No nscf code specified for this calculation")
     try:
@@ -53,7 +53,7 @@ def prepare_z2pack(cls, folder):
     num_lines          = settings_dict.get('num_lines', cls._DEFAULT_NUM_LINES)
     min_neighbour_dist = settings_dict.get('min_neighbour_dist', cls._DEFAULT_MIN_NEIGHBOUR_DISTANCE)
     iterator           = settings_dict.get('iterator', cls._DEFAULT_ITERATOR)
-    restart_mode       = settings_dict.get('restart_mode', False)
+    # restart_mode       = settings_dict.get('restart_mode', False)
     prepend_code       = settings_dict.get('prepend_code', '')
 
 
@@ -76,15 +76,15 @@ def prepare_z2pack(cls, folder):
     input_file_lines.append('import xml.etree.ElementTree as ET')
     input_file_lines.append('import json')
 
-    nscf_cmd      = ' {} {}'.format(mpi_command, nscf_code.get_execname())
+    nscf_cmd      = ' {} {}'.format(mpi_command, pw_code.get_execname())
     overlap_cmd   = ' {} {}'.format(mpi_command, overlap_code.get_execname())
     wannier90_cmd = ' {} {}'.format(mpi_command, wannier90_code.get_execname())
     
     z2cmd = (
         "(\n    '" +
         wannier90_cmd + ' aiida ' + ' -pp;' + "' +\n    '" +
-        nscf_cmd + pools_cmd + '< ' + cls._INPUT_PW_NSCF_FILE + '>& pw.log;'  + "' +\n    '" +
-        overlap_cmd + '< ' + cls._INPUT_OVERLAP_FILE + ' >& pw2wan.log;' + "'\n" +
+        nscf_cmd + pools_cmd + '< ' + cls._INPUT_PW_NSCF_FILE + '>& ' + cls._OUTPUT_PW_NSCF_FILE + ";' +\n    '" +
+        overlap_cmd + '< ' + cls._INPUT_OVERLAP_FILE + ' >& ' + cls._OUTPUT_OVERLAP_FILE + ";'\n" +
         ")"
         )
 
@@ -97,10 +97,11 @@ def prepare_z2pack(cls, folder):
     input_file_lines.append('system = z2pack.fp.System(')
     input_file_lines.append('    input_files = input_files,')
     input_file_lines.append('    kpt_fct     = [z2pack.fp.kpoint.qe, z2pack.fp.kpoint.wannier90_full],')
+    # input_file_lines.append('    build_folder= \'.\',')
     # input_file_lines.append('\t kpt_fct=[z2pack.fp.kpoint.qe, z2pack.fp.kpoint.wannier90],')
     input_file_lines.append('    kpt_path    = ' + str([cls._INPUT_PW_NSCF_FILE, cls._INPUT_W90_FILE]) + ',')
-    input_file_lines.append('    command     = z2cmd' + ',')
-    input_file_lines.append("    executable  = '/bin/bash'"+',')
+    input_file_lines.append('    command     = z2cmd,')
+    input_file_lines.append("    executable  = '/bin/bash',")
     input_file_lines.append("    mmn_path    = 'aiida.mmn'")            
     input_file_lines.append(")")
 
@@ -132,7 +133,7 @@ def prepare_z2pack(cls, folder):
         input_file_lines.append('    min_neighbour_dist = ' + str(min_neighbour_dist) + ',')
         input_file_lines.append('    iterator           = ' + str(iterator) + ',')
         input_file_lines.append('    save_file          = ' + "'"+cls._OUTPUT_SAVE_FILE +"'" + ',')
-        if restart_mode:
+        if cls.restart_mode:
             input_file_lines.append('    load               = True')
         input_file_lines.append('    )')
         if invariant == 'Z2':
