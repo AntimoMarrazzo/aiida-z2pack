@@ -46,14 +46,6 @@ class Z2packCalculation(CalcJob):
     # in restarts, it will copy from the parent the following
     _restart_copy_from_z2pack = os.path.join(_Z2pack_folder, '*')
 
-    # in restarts, it will copy the previous folder in the following one
-    _restart_copy_to_z2pack = _Z2pack_folder
-    # Default verbosity; change in subclasses
-    # _default_verbosity = 'high'
-
-    # _use_kpoints = False
-    # _DEFAULT_OUTPUT_FILE = 'z2pack_aiida.out'
-    # _OUTPUT_Z2PACK_FILE  = 'aiida.json'
     _INPUT_PW_SCF_FILE   = 'aiida.scf.in'
     _OUTPUT_PW_SCF_FILE  = 'aiida.scf.out'
 
@@ -111,25 +103,9 @@ class Z2packCalculation(CalcJob):
             help='Output of a previous scf/z2pack calculation (start a new z2pack calclulation)/(restart from an unfinished calculation)'
             )
 
-        # spec.input(
-        #     'structure', valid_type=orm.StructureData,
-        #     # default=orm.Dict(dict={}),
-        #     required=False,
-        #     help='The input structure.'
-        #     )
-        # spec.input_namespace(
-        #     'pseudos', valid_type=orm.UpfData, dynamic=True,
-        #     help='A mapping of `UpfData` nodes onto the kind name to which they should apply.'
-        #     )
-
-        # spec.input(
-        #     'pw_parameters', valid_type=orm.Dict,
-        #     default=orm.Dict(dict={}),
-        #     help='Dict: Input parameters for the nscf code (pw).'
-        #     )
         spec.input(
-            'overlap_parameters', valid_type=orm.Dict, 
-            default=orm.Dict(dict={}),
+            'overlap_parameters', valid_type=orm.Dict,
+            required=False,
             help='Dict: Input parameters for the overlap code (pw2wannier).'
             )
         spec.input(
@@ -140,19 +116,9 @@ class Z2packCalculation(CalcJob):
 
         spec.input(
             'pw_settings', valid_type=orm.Dict,
-            default=orm.Dict(dict={}),
+            required=False,
             help='Use an additional node for special settings.'
             )
-        # spec.input(
-        #     'overlap_settings', valid_type=orm.Dict,
-        #     default=orm.Dict(dict={}),
-        #     help='Use an additional node for special settings.'
-        #     )
-        # spec.input(
-        #     'wannier90_settings', valid_type=orm.Dict,
-        #     default=orm.Dict(dict={}),
-        #     help='Use an additional node for special settings.'
-        #     )
         spec.input(
             'z2pack_settings', valid_type=orm.Dict, 
             required=True,
@@ -179,10 +145,6 @@ class Z2packCalculation(CalcJob):
             required=True,
             help='Z2pack code.'
             )
-        # spec.input(
-        #     'metadata.options.nscf_parser_name', valid_type=six.string_types, 
-        #     default='quantumespresso.pw'
-        #     )
 
         spec.output(
             'output_parameters', valid_type=orm.Dict, required=True,
@@ -212,6 +174,9 @@ class Z2packCalculation(CalcJob):
         self.inputs.metadata.options.parser_name     = 'z2pack'
         self.inputs.metadata.options.output_filename = self._OUTPUT_Z2PACK_FILE
         self.inputs.metadata.options.input_filename  = self._INPUT_Z2PACK_FILE
+
+        if not 'overlap_parameters' in self.inputs:
+            self.inputs.overlap_parameters = orm.Dict(dict={})
 
         calcinfo = datastructures.CalcInfo()
 
@@ -262,13 +227,18 @@ class Z2packCalculation(CalcJob):
             self.inputs.pw_parameters = pw_calc.get_incoming(link_label_filter='parameters').first().node
             self.inputs.structure     = pw_calc.get_incoming(link_label_filter='structure').first().node
             self.inputs.pseudos       = pseudos_dict
+            if not 'pw_settings' in self.inputs:
+                settings = pw_calc.get_incoming(link_label_filter='settings').first()
+                if settings is None:
+                    self.inputs.pw_settings = orm.Dict(dict={})
+                else:
+                    self.inputs.pw_settings = settings
 
             prepare_nscf(self, folder)
             prepare_overlap(self, folder)
             prepare_wannier90(self, folder)
 
-            # Hack the data-file-schema.xml to get pseudos fro ../pseudo instead of ./pseudo
-
+            # Hack the data-file-schema.xml to get pseudos from ../pseudo instead of ./pseudo
             sub_out  = folder.get_subfolder(self._OUTPUT_SUBFOLDER, create=True)
             sub_save = sub_out.get_subfolder('{}.save'.format(self._PREFIX), create=True)
             parent.getfile(remote_xml_path, folder.get_abs_path('app.xml'))
@@ -310,35 +280,11 @@ class Z2packCalculation(CalcJob):
                 "parent node must be either from a PWscf or a Z2pack calculation."
                 )
 
-        # print(folder.get_abs_path('.'))
-        # print(folder.get_content_list())
-        # self.inputs.metadata.options.prepend_text = 'mv pseudo build/; mv out build/;'
-        # print(self.inputs.metadata.options)
-        # print(self.inputs.metadata.options.prepend_text)
-        # folder.get_subfolder(self._BUILD_SUBFOLDER, create=True)
-        # print(folder.get_content_list())
-        # folder.get_subfolder(self._OUTPUT_SUBFOLDER, create=True)
 
-        # calcinfo.local_copy_list.append(
-        #     (
-        #         uuid,
-        #         'data-file-schema.xml',
-        #         self._OUTPUT_SUBFOLDER
-        #     ))
-
-        # calcinfo.remote_copy_list.append(
-        #     (
-        #         uuid,
-        #         os.path.join(rpath, save_path, 'charge-density.dat'),
-        #         # os.path.join(self._BUILD_SUBFOLDER, self._OUTPUT_SUBFOLDER)
-        #         # self._OUTPUT_SUBFOLDER
-        #         os.path.join(save_path, 'charge-density.dat'),
-        #     ))
         calcinfo.remote_copy_list.append(
             (
                 uuid,
                 os.path.join(rpath, self._PSEUDO_SUBFOLDER),
-                # os.path.join(self._BUILD_SUBFOLDER, self._PSEUDO_SUBFOLDER)
                 self._PSEUDO_SUBFOLDER
             ))
 
@@ -446,108 +392,6 @@ class Z2packCalculation(CalcJob):
             raise AttributeError("No remote_folder found in output to the "
                                  "parent calculation set")
         self.use_parent_folder(remote_folder)
-        
-    # def _prepare_for_submission(self,tempfolder, inputdict):        
-    #     """
-    #     Routine, which creates the input and prepares for submission
-
-    #     :param tempfolder: a aiida.common.folders.Folder subclass where
-    #                        the plugin should put all its files.
-    #     :param inputdict: a dictionary with the input nodes, as they would
-    #             be returned by get_inputdata_dict (without the orm.Code!)
-    #     """        
-        
-
-                
-    #     from copy import deepcopy
-    #     inputdict_nscf=inputdict
-    #     inputdict_wannier90=deepcopy(inputdict)
-    #     inputdict_z2pack=deepcopy(inputdict)
-    #     inputdict_final=deepcopy(inputdict)
-    #     inputdict_settings=deepcopy(inputdict)
-    #     try:
-    #         settings_dict = inputdict_settings.pop(self.get_linkname('settings'))
-    #         try:
-    #             restart_mode=settings_dict.get_dict()['restart']
-    #         except KeyError:
-    #             restart_mode=False
-    #     except KeyError:
-    #         restart_mode=False
-    #         raise exceptions.InputValidationError("No settings specified for this calculation")
-
-    #     if restart_mode is False:
-    #         local_copy_list,remote_copy_list,remote_symlink_list=prepare_nscf(self,tempfolder,inputdict_nscf)
-    #         prepare_wannier90(self,tempfolder,inputdict_wannier90)
-    #     else:
-    #         parent_calc_folder = inputdict_settings.pop(self.get_linkname('parent_folder'), None)
-    #         local_copy_list=[]
-    #         remote_symlink_list=[]
-    #         remote_copy_list=[]
-                    
-    #         _internal_retrieve_list = [self._INPUT_NSCF_FILE,
-    #                                self._INPUT_W90_FILE,
-    #                                self._OUTPUT_Z2PACK_FILE,
-    #                                self._INPUT_OVERLAP_FILE,
-    #                                ]
-    #         if parent_calc_folder is not None:
-    #             for file_copy in _internal_retrieve_list:
-    #                 remote_copy_list.append(
-    #                     (parent_calc_folder.get_computer().uuid,
-    #                      os.path.join(parent_calc_folder.get_remote_path(),
-    #                      file_copy),
-    #                 self._restart_copy_to_z2pack
-    #                 ))
-    #             remote_copy_list.append(
-    #                     (parent_calc_folder.get_computer().uuid,
-    #                      os.path.join(parent_calc_folder.get_remote_path(),
-    #                      './out'),
-    #                 './'
-    #                 ))
-    #     #   if parent_calc_folder is not None:
-    #     #           remote_copy_list.append(
-    #     #           (parent_calc_folder.get_computer().uuid,
-    #     #           os.path.join(parent_calc_folder.get_remote_path(),
-    #     #                        self._restart_copy_from),
-    #     #           self._restart_copy_to
-    #     #           ))                    
-    #     #    if parent_calc_folder is not None:
-    #     #          # I put the symlink to the old parent ./out folder
-    #     #        remote_symlink_list.append(
-    #     #            (parent_calc_folder.get_computer().uuid,
-    #     #            os.path.join(parent_calc_folder.get_remote_path(),
-    #     #                        self._restart_copy_from),
-    #     #            self._restart_copy_to
-    #     #            ))          
-    #     prepare_z2pack(self,tempfolder,inputdict_z2pack)        
-    #     ############################################
-    #     # set Calcinfo
-    #     ############################################
-    #     calcinfo = CalcInfo()
-    #     calcinfo.uuid = self.uuid
-    #     calcinfo.local_copy_list = local_copy_list
-    #     calcinfo.remote_copy_list = remote_copy_list
-    #     calcinfo.remote_symlink_list = remote_symlink_list
-        
-    #     c1 = orm.CodeInfo()
-    #     c1.withmpi = False # No mpi
-    #     c1.cmdline_params = ['>',self._DEFAULT_OUTPUT_FILE]
-    #     main_code = inputdict_final.pop(self.get_linkname('code'),None)
-    #     c1.code_uuid = main_code.uuid
-    #     codes_info=[c1]
-    #     calcinfo.codes_info = codes_info
-    #     calcinfo.codes_run_mode = code_run_modes.SERIAL
-        
-    #     # Retrieve files
-    #     calcinfo.retrieve_list = []
-    #     calcinfo.retrieve_list.append(self._OUTPUT_Z2PACK_FILE)
-    #     calcinfo.retrieve_list.append(self._DEFAULT_OUTPUT_FILE)
-    #     calcinfo.retrieve_list.append(self._DEFAULT_OUTPUT_RESULTS_Z2PACK)
-        
-    #     return calcinfo
-        
-        
-        
-        
         
         
         
