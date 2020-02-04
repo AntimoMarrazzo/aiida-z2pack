@@ -28,23 +28,14 @@ class Z2packCalculation(CalcJob):
     _OUTPUT_SUBFOLDER    = "./out/"
 
     _REVERSE_BUILD_SUBFOLDER     = ".."
-    _BUILD_SUBFOLDER     = "./build"
 
     _Z2pack_folder = './'
-    _Z2pack_folder_restart_files=[]
     _default_parser      = 'z2pack'  
-
 
     ## Default PW output parser provided by AiiDA
     # to be defined in the subclass
 
     # _automatic_namelists = {}
-
-    # in restarts, will not copy but use symlinks
-    _default_symlink_usage = True
-
-    # in restarts, it will copy from the parent the following
-    _restart_copy_from_z2pack = os.path.join(_Z2pack_folder, '*')
 
     _INPUT_PW_SCF_FILE   = 'aiida.scf.in'
     _OUTPUT_PW_SCF_FILE  = 'aiida.scf.out'
@@ -63,13 +54,7 @@ class Z2packCalculation(CalcJob):
     _INPUT_OVERLAP_FILE  = 'aiida.pw2wan.in'
     _OUTPUT_OVERLAP_FILE = 'aiida.pw2wan.out'
 
-    _ERROR_W90_FILE          = _SEEDNAME + '.werr'
-
-    _ALWAYS_SYM_FILES    = ['UNK*', '*.mmn']
-    _RESTART_SYM_FILES   = ['*.amn','*.eig']
-    _CHK_FILE            = '*.chk'
-    _DEFAULT_INIT_ONLY   = False
-    _DEFAULT_WRITE_UNK   = False
+    _ERROR_W90_FILE      = _SEEDNAME + '.werr'
 
     _DEFAULT_MIN_NEIGHBOUR_DISTANCE = 0.01
     _DEFAULT_NUM_LINES              = 11

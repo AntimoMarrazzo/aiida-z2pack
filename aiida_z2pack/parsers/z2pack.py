@@ -28,9 +28,6 @@ class Z2packParser(Parser):
         super(Z2packParser, self).__init__(calculation)
 
     def parse(self, **kwargs):
-        successful = True
-        new_nodes_list = []
-
         try:
             out_folder = self.retrieved
         except exceptions.NotExistent:
@@ -57,7 +54,7 @@ class Z2packParser(Parser):
         data['Tests_passed'] = success
         
         try:
-            filpath = out_folder.get_abs_path( self.node._OUTPUT_Z2PACK_FILE)
+            filpath = out_folder.get_abs_path(self.node._OUTPUT_Z2PACK_FILE)
             with open(filpath, 'r') as fil:
                     out_file = fil.readlines()
         except OSError:
@@ -65,25 +62,17 @@ class Z2packParser(Parser):
 
         #out_file = out_file.split("\n")
         out_file = [i.strip('\n') for i in out_file]
-        if successful:
-            time = [i for i in out_file if 'Calculation finished' in i][0].split()[4:7]
-            wall_time_seconds = int(time[0].strip('h')) * 3600 + \
-                            int(time[1].strip('m')) * 60 + \
-                            int(time[2].strip('s'))
-        else:
-            wall_time_seconds = None 
+
+        time = [i for i in out_file if 'Calculation finished' in i][0].split()[4:7]
+        wall_time_seconds = int(time[0].strip('h')) * 3600 + \
+                        int(time[1].strip('m')) * 60 + \
+                        int(time[2].strip('s'))
+
         z2pack_version = [i for i in out_file if "running Z2Pack version" in i][0].split()[3]
         data['wall_time_seconds'] =  wall_time_seconds
         data['z2pack_version'] =  z2pack_version 
 
         self.out('output_parameters', Dict(dict=data))
-        # save the arrays
-        # output_data = ParameterData(dict=data)
-        # linkname = 'output_parameters'
-        # new_nodes_list += [(linkname,output_data)]
-        
-        # return successful,new_nodes_list
-
 
 
 
