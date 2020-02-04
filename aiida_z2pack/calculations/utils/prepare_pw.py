@@ -10,6 +10,7 @@ def _prepare_pw(cls, folder, calculation):
 	parameters = copy.deepcopy(cls.inputs.pw_parameters)
 
 	parameters['CONTROL']['calculation'] = calculation
+	parameters['SYSTEM']['nosym'] = True
 
 	arguments = [
 		parameters,
