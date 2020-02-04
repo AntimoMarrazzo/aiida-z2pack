@@ -242,6 +242,12 @@ class Z2packCalculation(CalcJob):
                     os.path.join(rpath, save_path, 'charge-density.dat'),
                     os.path.join(save_path, 'charge-density.dat'),
                 ))
+            calcinfo.remote_copy_list.append(
+                (
+                    uuid,
+                    os.path.join(rpath, save_path, 'paw.txt'),
+                    os.path.join(save_path, 'paw.txt'),
+                ))
 
         elif parent_type == Z2packCalculation:
             self.restart_mode = True
