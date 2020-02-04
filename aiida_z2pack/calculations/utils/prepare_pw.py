@@ -1,3 +1,4 @@
+import os
 import copy
 from aiida.plugins import CalculationFactory
 from aiida_quantumespresso.calculations import _uppercase_dict
@@ -24,10 +25,11 @@ def _prepare_pw(cls, folder, calculation):
 	with folder.open(input_filename, 'w') as infile:
 		infile.write(input_filecontent)
 
-def prepare_scf(cls, folder):
-	PwCalculation._OUTPUT_SUBFOLDER = cls._OUTPUT_SUBFOLDER
-	_prepare_pw(cls, folder, 'scf')
+# def prepare_scf(cls, folder):
+# 	PwCalculation._OUTPUT_SUBFOLDER = cls._OUTPUT_SUBFOLDER
+# 	_prepare_pw(cls, folder, 'scf')
 
 def prepare_nscf(cls, folder):
-	PwCalculation._OUTPUT_SUBFOLDER = cls._SCFTMP_SUBFOLDER
+	PwCalculation._OUTPUT_SUBFOLDER = os.path.join(cls._REVERSE_BUILD_SUBFOLDER, cls._OUTPUT_SUBFOLDER)
+	PwCalculation._PSEUDO_SUBFOLDER = os.path.join(cls._REVERSE_BUILD_SUBFOLDER, cls._PSEUDO_SUBFOLDER)
 	_prepare_pw(cls, folder, 'nscf')

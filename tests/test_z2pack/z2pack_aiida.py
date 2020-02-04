@@ -9,8 +9,8 @@ import json
 
 z2cmd =(
     ' mpirun -np 1 /bin/true aiida  -pp;' +
-    ' mpirun -np 1 /bin/true< aiida.nscf.in>& aiida.nscf.out;' +
-    ' mpirun -np 1 /bin/true< aiida.pw2wan.in >& aiida.pw2wan.out;'
+    ' mpirun -np 1 /bin/true < aiida.nscf.in >& aiida.nscf.out;' +
+    ' mpirun -np 1 /bin/true < aiida.pw2wan.in  >& aiida.pw2wan.out;'
 )
 
 input_files = ['aiida.nscf.in', 'aiida.pw2wan.in', 'aiida.win']

@@ -10,7 +10,7 @@ def prepare_overlap(cls,folder):
 
 	parameters = NamelistsCalculation._set_blocked_keywords(parameters)
 
-	content = NamelistsCalculation._generate_input_file(parameters)
+	content = NamelistsCalculation._generate_input_file(parameters) + '\n\n'
 
 	input_filename = cls._INPUT_OVERLAP_FILE
 

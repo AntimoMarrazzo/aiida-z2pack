@@ -83,8 +83,8 @@ def prepare_z2pack(cls, folder):
     z2cmd = (
         "(\n    '" +
         wannier90_cmd + ' aiida ' + ' -pp;' + "' +\n    '" +
-        nscf_cmd + pools_cmd + '< ' + cls._INPUT_PW_NSCF_FILE + '>& ' + cls._OUTPUT_PW_NSCF_FILE + ";' +\n    '" +
-        overlap_cmd + '< ' + cls._INPUT_OVERLAP_FILE + ' >& ' + cls._OUTPUT_OVERLAP_FILE + ";'\n" +
+        nscf_cmd + pools_cmd + ' < ' + cls._INPUT_PW_NSCF_FILE + ' >& ' + cls._OUTPUT_PW_NSCF_FILE + ";' +\n    '" +
+        overlap_cmd + ' < ' + cls._INPUT_OVERLAP_FILE + '  >& ' + cls._OUTPUT_OVERLAP_FILE + ";'\n" +
         ")"
         )
 

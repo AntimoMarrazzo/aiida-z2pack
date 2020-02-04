@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import os
-import six
-import copy
 
 from aiida import orm
 from aiida.engine import CalcJob
@@ -11,10 +9,10 @@ from aiida.common import datastructures, exceptions
 from aiida.orm.nodes.data.upf import get_pseudos_from_structure
 # from aiida_quantumespresso.calculations.namelists import NamelistsCalculation
 
-from .utils import prepare_scf, prepare_nscf, prepare_overlap, prepare_wannier90, prepare_z2pack
+from .utils import prepare_nscf, prepare_overlap, prepare_wannier90, prepare_z2pack
 
 PwCalculation           = CalculationFactory('quantumespresso.pw')
-Wannier90Calculation    = CalculationFactory('wannier90.wannier90')
+# Wannier90Calculation    = CalculationFactory('wannier90.wannier90')
 # Pw2wannier90Calculation = CalculationFactory('quantumespresso.pw2wannier90')
 
 class Z2packCalculation(CalcJob):
@@ -22,13 +20,15 @@ class Z2packCalculation(CalcJob):
     Plugin for Z2pack, a code for computing topological invariants.
     See http://z2pack.ethz.ch/ for more details
     """
-    # _PSEUDO_SUBFOLDER = './pseudo/'
+    _PSEUDO_SUBFOLDER = './pseudo/'
     _PREFIX              = 'aiida'
     _SEEDNAME            = 'aiida'
 
-    _INPUT_SUBFOLDER     = "./out/"
+    _INPUT_SUBFOLDER     = "./out/" #Still used by some workchains?
     _OUTPUT_SUBFOLDER    = "./out/"
-    _SCFTMP_SUBFOLDER    = "../out"
+
+    _REVERSE_BUILD_SUBFOLDER     = ".."
+    _BUILD_SUBFOLDER     = "./build"
 
     _Z2pack_folder = './'
     _Z2pack_folder_restart_files=[]
@@ -89,7 +89,8 @@ class Z2packCalculation(CalcJob):
 
     _blocked_keywords_pw = PwCalculation._blocked_keywords
     _blocked_keywords_overlap = [
-        ('INPUTPP', 'outdir', _SCFTMP_SUBFOLDER),
+        ('INPUTPP', 'outdir', os.path.join(_REVERSE_BUILD_SUBFOLDER, _OUTPUT_SUBFOLDER)),
+        # ('INPUTPP', 'outdir', _OUTPUT_SUBFOLDER),
         ('INPUTPP', 'prefix', _PREFIX),
         ('INPUTPP', 'seedname', _SEEDNAME),
         ('INPUTPP', 'write_amn', False),
@@ -142,16 +143,16 @@ class Z2packCalculation(CalcJob):
             default=orm.Dict(dict={}),
             help='Use an additional node for special settings.'
             )
-        spec.input(
-            'overlap_settings', valid_type=orm.Dict,
-            default=orm.Dict(dict={}),
-            help='Use an additional node for special settings.'
-            )
-        spec.input(
-            'wannier90_settings', valid_type=orm.Dict,
-            default=orm.Dict(dict={}),
-            help='Use an additional node for special settings.'
-            )
+        # spec.input(
+        #     'overlap_settings', valid_type=orm.Dict,
+        #     default=orm.Dict(dict={}),
+        #     help='Use an additional node for special settings.'
+        #     )
+        # spec.input(
+        #     'wannier90_settings', valid_type=orm.Dict,
+        #     default=orm.Dict(dict={}),
+        #     help='Use an additional node for special settings.'
+        #     )
         spec.input(
             'z2pack_settings', valid_type=orm.Dict, 
             required=True,
@@ -221,7 +222,7 @@ class Z2packCalculation(CalcJob):
         codeinfo.code_uuid   = self.inputs.code.uuid
         calcinfo.codes_info  = [codeinfo]
 
-        calcinfo.codes_run_mode = CodeRunMode.PARALLEL
+        calcinfo.codes_run_mode = CodeRunMode.SERIAL
         calcinfo.cmdline_params = []
 
         calcinfo.retrieve_list           = []
@@ -244,7 +245,12 @@ class Z2packCalculation(CalcJob):
         calcinfo.retrieve_list.extend(outputs)
 
         parent = self.inputs.parent_folder
+        rpath  = parent.get_remote_path()
+        uuid   = parent.computer.uuid
         parent_type = self._get_parent_type()
+
+        save_path       = os.path.join(self._OUTPUT_SUBFOLDER, '{}.save'.format(self._PREFIX))
+        remote_xml_path = os.path.join(save_path, PwCalculation._DATAFILE_XML_POST_6_2)
 
         self.restart_mode = False
         if parent_type == PwCalculation:
@@ -261,21 +267,80 @@ class Z2packCalculation(CalcJob):
             prepare_overlap(self, folder)
             prepare_wannier90(self, folder)
 
+            # Hack the data-file-schema.xml to get pseudos fro ../pseudo instead of ./pseudo
+
+            sub_out  = folder.get_subfolder(self._OUTPUT_SUBFOLDER, create=True)
+            sub_save = sub_out.get_subfolder('{}.save'.format(self._PREFIX), create=True)
+            parent.getfile(remote_xml_path, folder.get_abs_path('app.xml'))
+
+            with folder.open('app.xml') as f:
+                xml_content = f.read()
+
+            xml_content = xml_content.replace('./pseudo', '../pseudo')
+
+            with sub_save.open(PwCalculation._DATAFILE_XML_POST_6_2, 'w') as f:
+                f.write(xml_content)
+
             calcinfo.remote_copy_list.append(
-                (parent.computer.uuid, self._OUTPUT_SUBFOLDER, self._INPUT_SUBFOLDER)
-                )
+                (
+                    uuid,
+                    os.path.join(rpath, save_path, 'charge-density.dat'),
+                    os.path.join(save_path, 'charge-density.dat'),
+                ))
+
         elif parent_type == Z2packCalculation:
             self.restart_mode = True
             calcinfo.remote_copy_list.extend(
-                [(parent.computer.uuid, inp, inp) for inp in inputs]
+                [(uuid, os.path.join(rpath, inp), inp) for inp in inputs]
                 )
             calcinfo.remote_copy_list.append(
-                (parent.computer.uuid, self._OUTPUT_SUBFOLDER, self._INPUT_SUBFOLDER)
-                )
+                (
+                    uuid,
+                    os.path.join(rpath, save_path),
+                    save_path,
+                ))
+            calcinfo.remote_copy_list.append(
+                (
+                    uuid,
+                    os.path.join(rpath, self._OUTPUT_SAVE_FILE),
+                    self._OUTPUT_SAVE_FILE,
+                ))
         else:
             raise exceptions.ValidationError(
                 "parent node must be either from a PWscf or a Z2pack calculation."
                 )
+
+        # print(folder.get_abs_path('.'))
+        # print(folder.get_content_list())
+        # self.inputs.metadata.options.prepend_text = 'mv pseudo build/; mv out build/;'
+        # print(self.inputs.metadata.options)
+        # print(self.inputs.metadata.options.prepend_text)
+        # folder.get_subfolder(self._BUILD_SUBFOLDER, create=True)
+        # print(folder.get_content_list())
+        # folder.get_subfolder(self._OUTPUT_SUBFOLDER, create=True)
+
+        # calcinfo.local_copy_list.append(
+        #     (
+        #         uuid,
+        #         'data-file-schema.xml',
+        #         self._OUTPUT_SUBFOLDER
+        #     ))
+
+        # calcinfo.remote_copy_list.append(
+        #     (
+        #         uuid,
+        #         os.path.join(rpath, save_path, 'charge-density.dat'),
+        #         # os.path.join(self._BUILD_SUBFOLDER, self._OUTPUT_SUBFOLDER)
+        #         # self._OUTPUT_SUBFOLDER
+        #         os.path.join(save_path, 'charge-density.dat'),
+        #     ))
+        calcinfo.remote_copy_list.append(
+            (
+                uuid,
+                os.path.join(rpath, self._PSEUDO_SUBFOLDER),
+                # os.path.join(self._BUILD_SUBFOLDER, self._PSEUDO_SUBFOLDER)
+                self._PSEUDO_SUBFOLDER
+            ))
 
         prepare_z2pack(self, folder)
 

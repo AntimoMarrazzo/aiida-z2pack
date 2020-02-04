@@ -1,8 +1,5 @@
 import os
-import copy
-import shutil
-from aiida import orm, load_profile
-from aiida.orm.utils import load_node
+from aiida import orm
 from aiida.common import datastructures
 
 from aiida_quantumespresso.utils.resources import get_default_options
