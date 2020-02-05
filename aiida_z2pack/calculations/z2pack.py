@@ -250,7 +250,16 @@ class Z2packCalculation(CalcJob):
                 ))
 
         elif parent_type == Z2packCalculation:
-            self.restart_mode = True
+            settings = self.inputs.z2pack_settings.get_dict()
+            self.restart_mode = settings.get('restart_mode', True)
+            if self.restart_mode:
+                calcinfo.remote_copy_list.append(
+                    (
+                        uuid,
+                        os.path.join(rpath, self._OUTPUT_SAVE_FILE),
+                        self._OUTPUT_SAVE_FILE,
+                    ))
+
             calcinfo.remote_copy_list.extend(
                 [(uuid, os.path.join(rpath, inp), inp) for inp in inputs]
                 )
@@ -259,12 +268,6 @@ class Z2packCalculation(CalcJob):
                     uuid,
                     os.path.join(rpath, save_path),
                     save_path,
-                ))
-            calcinfo.remote_copy_list.append(
-                (
-                    uuid,
-                    os.path.join(rpath, self._OUTPUT_SAVE_FILE),
-                    self._OUTPUT_SAVE_FILE,
                 ))
         else:
             raise exceptions.ValidationError(
