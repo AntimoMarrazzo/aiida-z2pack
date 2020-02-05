@@ -224,16 +224,17 @@ class Z2packCalculation(CalcJob):
             prepare_wannier90(self, folder)
 
             # Hack the data-file-schema.xml to get pseudos from ../pseudo instead of ./pseudo
+            xml_name = PwCalculation._DATAFILE_XML_POST_6_2
             sub_out  = folder.get_subfolder(self._OUTPUT_SUBFOLDER, create=True)
             sub_save = sub_out.get_subfolder('{}.save'.format(self._PREFIX), create=True)
-            parent.getfile(remote_xml_path, folder.get_abs_path('app.xml'))
+            parent.getfile(remote_xml_path, sub_save.get_abs_path(xml_name))
 
-            with folder.open('app.xml') as f:
+            with sub_save.open(xml_name) as f:
                 xml_content = f.read()
 
             xml_content = xml_content.replace('./pseudo', '../pseudo')
 
-            with sub_save.open(PwCalculation._DATAFILE_XML_POST_6_2, 'w') as f:
+            with sub_save.open(xml_name, 'w') as f:
                 f.write(xml_content)
 
             calcinfo.remote_copy_list.append(
