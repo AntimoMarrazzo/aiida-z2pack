@@ -121,7 +121,7 @@ def prepare_z2pack(cls, folder):
         input_file_lines.append('    system             = system,')
         if(dim_mode=='2D'):
             if (invariant=='Z2'):
-                input_file_lines.append('    surface            = lambda t1,t2: [t1/2, t2, 0],')
+                input_file_lines.append('    surface            = lambda t1,t2: [t2, t1/2, 0],')
             elif (invariant=='Chern'):
                 input_file_lines.append('    surface            = lambda t1,t2: [t1, t2, 0],')
         elif(dim_mode=='3D'):
