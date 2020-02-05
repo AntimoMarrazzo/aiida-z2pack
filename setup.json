@@ -9,10 +9,10 @@
     "description": "The official AiiDA plugin for z2pack",
     "entry_points": {
         "aiida.calculations": [
-            "z2pack = aiida_z2pack.calculations.z2pack:Z2packCalculation"
+            "z2pack.z2pack = aiida_z2pack.calculations.z2pack:Z2packCalculation"
         ],
         "aiida.parsers": [
-            "z2pack = aiida_z2pack.parsers.z2pack:Z2packParser"
+            "z2pack.z2pack = aiida_z2pack.parsers.z2pack:Z2packParser"
         ]
     },
     "install_requires": [
