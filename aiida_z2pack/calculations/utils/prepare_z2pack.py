@@ -96,7 +96,7 @@ def prepare_z2pack(cls, folder):
     input_file_lines.append('input_files = ' + str(input_files))
     input_file_lines.append('system = z2pack.fp.System(')
     input_file_lines.append('    input_files = input_files,')
-    input_file_lines.append('    kpt_fct     = [z2pack.fp.kpoint.qe, z2pack.fp.kpoint.wannier90_full],')
+    input_file_lines.append('    kpt_fct     = [z2pack.fp.kpoint.qe_explicit, z2pack.fp.kpoint.wannier90_full],')
     # input_file_lines.append('    build_folder= \'.\',')
     # input_file_lines.append('\t kpt_fct=[z2pack.fp.kpoint.qe, z2pack.fp.kpoint.wannier90],')
     input_file_lines.append('    kpt_path    = ' + str([cls._INPUT_PW_NSCF_FILE, cls._INPUT_W90_FILE]) + ',')
