@@ -78,11 +78,11 @@ def prepare_z2pack(cls, folder):
 
     nscf_cmd      = ' {} {}'.format(mpi_command, pw_code.get_execname())
     overlap_cmd   = ' {} {}'.format(mpi_command, overlap_code.get_execname())
-    wannier90_cmd = ' {} {}'.format(mpi_command, wannier90_code.get_execname())
+    wannier90_cmd = ' {}'.format(wannier90_code.get_execname())
     
     z2cmd = (
         "(\n    '" +
-        wannier90_cmd + ' aiida ' + ' -pp;' + "' +\n    '" +
+        wannier90_cmd + ' ' + cls._SEEDNAME + ' -pp;' + "' +\n    '" +
         nscf_cmd + pools_cmd + ' < ' + cls._INPUT_PW_NSCF_FILE + ' >& ' + cls._OUTPUT_PW_NSCF_FILE + ";' +\n    '" +
         overlap_cmd + ' < ' + cls._INPUT_OVERLAP_FILE + '  >& ' + cls._OUTPUT_OVERLAP_FILE + ";'\n" +
         ")"
@@ -102,7 +102,7 @@ def prepare_z2pack(cls, folder):
     input_file_lines.append('    kpt_path    = ' + str([cls._INPUT_PW_NSCF_FILE, cls._INPUT_W90_FILE]) + ',')
     input_file_lines.append('    command     = z2cmd,')
     input_file_lines.append("    executable  = '/bin/bash',")
-    input_file_lines.append("    mmn_path    = 'aiida.mmn'")            
+    input_file_lines.append("    mmn_path    = '{}.mmn'".format(cls._SEEDNAME))            
     input_file_lines.append(")")
 
     input_file_lines.append("")   
