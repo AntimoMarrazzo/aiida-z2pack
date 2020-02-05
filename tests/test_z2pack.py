@@ -48,6 +48,14 @@ def test_z2pack_inputs(
             (pseudo, 'pseudos__Si'),
             ]
         )
+    try:
+        os.mkdir('/tmp/out')
+        os.mkdir('/tmp/out/aiida.save/')
+    except FileExistsError:
+        pass
+    with open('/tmp/out/aiida.save/data-file-schema.xml', 'w') as f:
+        f.write('123')
+
     # calc   = remote.get_incoming().first().node
 
 
@@ -100,16 +108,20 @@ def test_z2pack_inputs(
 
     # Checks on the files written to the sandbox folder as raw input
     # print(os.path.realpath(os.path.curdir))
-    retrieved_list = inputs
+    retrieved_list = inputs + ['out']
     target = './tests/test_z2pack'
+    # import shutil
     # for name in inputs:
     #     shutil.copy(
     #         fixture_sandbox.get_abs_path(name),
     #         os.path.join(target, name)
     #         )
-    # assert sorted(fixture_sandbox.get_content_list()) == sorted(retrieved_list)
+    assert sorted(fixture_sandbox.get_content_list()) == sorted(retrieved_list)
     for name in retrieved_list:
         path = os.path.join(target, name)
+        if not os.path.isfile(path):
+            continue
+            
         with open(path, 'r') as f:
             base_input = f.read()
 

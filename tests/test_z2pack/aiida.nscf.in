@@ -1,8 +1,8 @@
 &CONTROL
   calculation = 'nscf'
-  outdir = '../out'
+  outdir = '.././out/'
   prefix = 'aiida'
-  pseudo_dir = './pseudo/'
+  pseudo_dir = '.././pseudo/'
   verbosity = 'high'
 /
 &SYSTEM
@@ -10,6 +10,7 @@
   ecutwfc =   3.0000000000d+01
   ibrav = 0
   nat = 2
+  nosym = .true.
   ntyp = 1
 /
 &ELECTRONS

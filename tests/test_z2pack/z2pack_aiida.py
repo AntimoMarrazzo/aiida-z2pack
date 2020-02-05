@@ -8,7 +8,7 @@ import xml.etree.ElementTree as ET
 import json
 
 z2cmd =(
-    ' mpirun -np 1 /bin/true aiida  -pp;' +
+    ' /bin/true aiida -pp;' +
     ' mpirun -np 1 /bin/true < aiida.nscf.in >& aiida.nscf.out;' +
     ' mpirun -np 1 /bin/true < aiida.pw2wan.in  >& aiida.pw2wan.out;'
 )
@@ -16,7 +16,7 @@ z2cmd =(
 input_files = ['aiida.nscf.in', 'aiida.pw2wan.in', 'aiida.win']
 system = z2pack.fp.System(
     input_files = input_files,
-    kpt_fct     = [z2pack.fp.kpoint.qe, z2pack.fp.kpoint.wannier90_full],
+    kpt_fct     = [z2pack.fp.kpoint.qe_explicit, z2pack.fp.kpoint.wannier90_full],
     kpt_path    = ['aiida.nscf.in', 'aiida.win'],
     command     = z2cmd,
     executable  = '/bin/bash',
