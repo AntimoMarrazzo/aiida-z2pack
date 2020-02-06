@@ -132,6 +132,7 @@ class Z2packCalculation(CalcJob):
             'output_parameters', valid_type=orm.Dict, required=True,
             help='The `output_parameters` output node of the successful calculation.'
             )
+        spec.default_output_node = 'output_parameters'
 
         spec.exit_code(
             199, 'ERROR_UNEXPECTED_FAILURE',
