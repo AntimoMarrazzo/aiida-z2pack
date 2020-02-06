@@ -22,7 +22,7 @@ def merge_dict_inputs_from_parent(cls, parent, parent_class, *input_labels, merg
         
         old = {}
         try:
-            old = _recursive_get_linked_node(parent, label_old, _get_previous_node, parent_class)
+            old = recursive_get_linked_node(parent, label_old, get_previous_node, parent_class)
         except:
             pass
         else:
@@ -53,3 +53,15 @@ def recursive_get_linked_node(node, label, get_previous_node, node_class):
             node = get_previous_node(node, node_class)
 
     return res
+
+def get_root_parent(cls, node_class):
+    parent = cls.inputs.parent_folder
+    calc   = parent.get_incoming(node_class=node_class).first().node
+
+    while True:
+        try:
+            calc = get_previous_node(calc, node_class)
+        except:
+            break
+
+    return calc
