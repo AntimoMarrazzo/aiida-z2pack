@@ -11,6 +11,7 @@ from aiida.orm.nodes.data.upf import get_pseudos_from_structure
 # from aiida_quantumespresso.calculations.namelists import NamelistsCalculation
 
 from .utils import prepare_nscf, prepare_overlap, prepare_wannier90, prepare_z2pack
+from .utils import merge_dict_inputs_from_parent, get_previous_node, recursive_get_linked_node
 
 PwCalculation           = CalculationFactory('quantumespresso.pw')
 # Wannier90Calculation    = CalculationFactory('wannier90.wannier90')
@@ -314,56 +315,6 @@ class Z2packCalculation(CalcJob):
 
         return calc
 
-    def _merge_dict_inputs_from_parent(self, parent, *input_labels, merge=True):
-        def deep_update(old, new):
-            for k,v in new.items():
-                if isinstance(v, dict) and k in old and isinstance(old[k], dict):
-                    deep_update(old[k], v)
-                else:
-                    old[k] = v  
-            return old
-
-        for label in input_labels:
-            if isinstance(label, tuple):
-                label_old = label[0]
-                label_new = label[1]
-            else:
-                label_old = label_new = label
-            new = {}
-
-            if label_new in self.inputs:
-                new = getattr(self.inputs, label_new).get_dict()
-            
-            old = {}
-            search = parent.get_incoming(link_label_filter=label_old).first()
-            if not search is None:
-                old = search.node.get_dict()
-
-            if merge:
-                # old.update(new)
-                to_set = deep_update(old, new)
-            else:
-                if not new and old:
-                    to_set = old
-                else:
-                    to_set = new
-
-            setattr(self.inputs, label_new, orm.Dict(dict=to_set))
-
-    def _recursive_get_linked_node(self, label):
-        parent = self.inputs.parent_folder
-        calc   = parent.get_incoming(node_class=Z2packCalculation).first().node
-
-        res = None
-        while res is None:
-            try:
-                res = calc.get_incoming(link_label_filter=label).first().node
-            except:
-                parent = calc.get_incoming(node_class=orm.RemoteData).first().node
-                calc   = parent.get_incoming(node_class=Z2packCalculation).first().node
-
-        return res
-
     def _set_inputs_from_parent_scf(self):
         parent = self.inputs.parent_folder
         calc   = parent.get_incoming(node_class=PwCalculation).first().node
@@ -373,26 +324,30 @@ class Z2packCalculation(CalcJob):
         self.inputs.pseudos       = pseudos_dict
         self.inputs.structure     = calc.get_incoming(link_label_filter='structure').first().node
 
-        self._merge_dict_inputs_from_parent(calc, ('parameters', 'pw_parameters'), ('settings','pw_settings'))
+        merge_dict_inputs_from_parent(
+            calc, PwCalculation,
+            ('parameters', 'pw_parameters'),
+            ('settings','pw_settings')
+            )
 
     def _set_inputs_from_parent_z2pack(self):
-        # parent = self.inputs.parent_folder
-        # calc   = parent.get_incoming(node_class=Z2packCalculation).first().node
+        parent = self.inputs.parent_folder
+        calc   = parent.get_incoming(node_class=Z2packCalculation).first().node
         # calc   = self._get_root_parent()
 
         for label in ['pw_code', 'overlap_code', 'wannier90_code', 'code']:
             if label in self.inputs:
                 continue
             # old = calc.get_incoming(link_label_filter=label).first().node
-            old = self._recursive_get_linked_node(label)
+            old = recursive_get_linked_node(calc, label, get_previous_node, Z2packCalculation)
             setattr(self.inputs, label, old)
 
-        self._merge_dict_inputs_from_parent(
-            calc,
+        merge_dict_inputs_from_parent(
+            calc, Z2packCalculation,
             'pw_parameters',
             merge=True)
-        self._merge_dict_inputs_from_parent(
-            calc,
+        merge_dict_inputs_from_parent(
+            calc, Z2packCalculation,
             'overlap_parameters',
             'wannier90_parameters',
             'pw_settings',
