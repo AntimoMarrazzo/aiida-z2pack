@@ -17,10 +17,10 @@ def prepare_z2pack(cls, folder):
         raise exceptions.InputValidationError("No Wannier90 code specified for this calculation")
     
 
-    if 'z2pack_settings' in cls.inputs:
+    try:
         settings_dict = _lowercase_dict(cls.inputs.z2pack_settings.get_dict(), dict_name='z2pack_settings')
         # settings_dict = cls.inputs.settings.get_dict()
-    else:
+    except:
         raise exceptions.InputValidationError("No settings code specified for this calculation")          
 
     try:

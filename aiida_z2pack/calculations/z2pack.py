@@ -301,6 +301,19 @@ class Z2packCalculation(CalcJob):
         if z2pack:
             return Z2packCalculation
 
+    def _get_root_parent(self):
+        parent = self.inputs.parent_folder
+        calc   = parent.get_incoming(node_class=Z2packCalculation).first().node
+
+        while True:
+            parent = calc.get_incoming(node_class=orm.RemoteData).first().node
+            try:
+                calc = parent.get_incoming(node_class=Z2packCalculation).first().node
+            except:
+                break
+
+        return calc
+
     def _merge_dict_inputs_from_parent(self, parent, *input_labels, merge=True):
         def deep_update(old, new):
             for k,v in new.items():
@@ -349,11 +362,12 @@ class Z2packCalculation(CalcJob):
         self._merge_dict_inputs_from_parent(calc, ('parameters', 'pw_parameters'), ('settings','pw_settings'))
 
     def _set_inputs_from_parent_z2pack(self):
-        parent = self.inputs.parent_folder
-        calc   = parent.get_incoming(node_class=Z2packCalculation).first().node
+        # parent = self.inputs.parent_folder
+        # calc   = parent.get_incoming(node_class=Z2packCalculation).first().node
+        calc   = self._get_root_parent()
 
         for label in ['pw_code', 'overlap_code', 'wannier90_code', 'code']:
-            if  label in self.inputs:
+            if label in self.inputs:
                 continue
             old = calc.get_incoming(link_label_filter=label).first().node
             setattr(self.inputs, label, old)
