@@ -87,7 +87,7 @@ def test_z2pack_inputs(
 
     # Checks on the files written to the sandbox folder as raw input
     retrieved_list = inputs + ['out']
-    target = './tests/test_z2pack'
+    target = './tests/fixtures/calculation'
     # import shutil
     # for name in inputs:
     #     shutil.copy(

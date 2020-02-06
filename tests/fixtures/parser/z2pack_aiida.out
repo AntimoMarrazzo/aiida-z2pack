@@ -1,0 +1,89 @@
+
++----------------------------------------------------------------------+
+|===================                                                   |
+|SURFACE CALCULATION                                                   |
+|===================                                                   |
+|starting at 2020-02-06 17:31:56,512                                   |
+|running Z2Pack version 2.1.1                                          |
+|                                                                      |
+|gap_tol:            0.3                                               |
+|init_result:        None                                              |
+|iterator:           range(8, 81, 2)                                   |
+|load:               True                                              |
+|load_quiet:         True                                              |
+|min_neighbour_dist: 0.0001                                            |
+|move_tol:           0.3                                               |
+|num_lines:          11                                                |
+|pos_tol:            0.01                                              |
+|save_file:          save.json                                         |
+|serializer:         auto                                              |
+|surface:            <function <lambda> at 0x7fe6f4d00e18>             |
+|system:             <z2pack.fp._first_prin<...>ject at 0x7fe69de55160>|
++----------------------------------------------------------------------+
+
+INFO: Initializing result from 'init_result'.
+INFO: Re-running existing lines.
+INFO: Re-running line for t = 0.0
+INFO: Re-running line for t = 0.1
+INFO: Re-running line for t = 0.2
+INFO: Re-running line for t = 0.30000000000000004
+INFO: Re-running line for t = 0.4
+INFO: Re-running line for t = 0.5
+INFO: Re-running line for t = 0.6000000000000001
+INFO: Re-running line for t = 0.6500000000000001
+INFO: Re-running line for t = 0.6625000000000001
+INFO: Re-running line for t = 0.6656250000000001
+INFO: Re-running line for t = 0.6671875
+INFO: Re-running line for t = 0.6687500000000001
+INFO: Re-running line for t = 0.6695312500000001
+INFO: Re-running line for t = 0.6703125000000001
+INFO: Re-running line for t = 0.67109375
+INFO: Re-running line for t = 0.671875
+INFO: Re-running line for t = 0.675
+INFO: Re-running line for t = 0.7000000000000001
+INFO: Re-running line for t = 0.8
+INFO: Re-running line for t = 0.9
+INFO: Re-running line for t = 1.0
+INFO: Adding lines required by 'num_lines'.
+INFO: Line at t = 0.0 exists already.
+INFO: Line at t = 0.1 exists already.
+INFO: Line at t = 0.2 exists already.
+INFO: Line at t = 0.30000000000000004 exists already.
+INFO: Line at t = 0.4 exists already.
+INFO: Line at t = 0.5 exists already.
+INFO: Line at t = 0.6000000000000001 exists already.
+INFO: Line at t = 0.7000000000000001 exists already.
+INFO: Line at t = 0.8 exists already.
+INFO: Line at t = 0.9 exists already.
+INFO: Line at t = 1.0 exists already.
+INFO: Convergence criteria fulfilled for 20 of 20 neighbouring lines.
+INFO: Saving surface result to file save.json (ASYNC)
+
++----------------------------------------------------------------------+
+|                   Calculation finished in 0h 0m 1s                   |
++----------------------------------------------------------------------+
+
++----------------------------------------------------------------------+
+|                         ==================                           |
+|                         CONVERGENCE REPORT                           |
+|                         ==================                           |
+|                                                                      |
+|                         Line Convergence                             |
+|                         ================                             |
+|                                                                      |
+|                             PosCheck                                 |
+|                             --------                                 |
+|                             PASSED: 21 of 21                         |
+|                                                                      |
+|                         Surface Convergence                          |
+|                         ===================                          |
+|                                                                      |
+|                             GapCheck                                 |
+|                             --------                                 |
+|                             PASSED: 20 of 20                         |
+|                                                                      |
+|                             MoveCheck                                |
+|                             ---------                                |
+|                             PASSED: 20 of 20                         |
++----------------------------------------------------------------------+
+
