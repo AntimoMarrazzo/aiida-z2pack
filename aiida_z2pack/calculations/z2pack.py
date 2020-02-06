@@ -350,6 +350,20 @@ class Z2packCalculation(CalcJob):
 
             setattr(self.inputs, label_new, orm.Dict(dict=to_set))
 
+    def _recursive_get_linked_node(self, label):
+        parent = self.inputs.parent_folder
+        calc   = parent.get_incoming(node_class=Z2packCalculation).first().node
+
+        res = None
+        while res is None:
+            try:
+                res = calc.get_incoming(link_label_filter=label).first().node
+            except:
+                parent = calc.get_incoming(node_class=orm.RemoteData).first().node
+                calc   = parent.get_incoming(node_class=Z2packCalculation).first().node
+
+        return res
+
     def _set_inputs_from_parent_scf(self):
         parent = self.inputs.parent_folder
         calc   = parent.get_incoming(node_class=PwCalculation).first().node
@@ -364,12 +378,13 @@ class Z2packCalculation(CalcJob):
     def _set_inputs_from_parent_z2pack(self):
         # parent = self.inputs.parent_folder
         # calc   = parent.get_incoming(node_class=Z2packCalculation).first().node
-        calc   = self._get_root_parent()
+        # calc   = self._get_root_parent()
 
         for label in ['pw_code', 'overlap_code', 'wannier90_code', 'code']:
             if label in self.inputs:
                 continue
-            old = calc.get_incoming(link_label_filter=label).first().node
+            # old = calc.get_incoming(link_label_filter=label).first().node
+            old = self._recursive_get_linked_node(label)
             setattr(self.inputs, label, old)
 
         self._merge_dict_inputs_from_parent(
