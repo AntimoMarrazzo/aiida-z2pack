@@ -20,6 +20,7 @@ def test_z2pack_inputs(
             'ecutwfc': 30.0
             }
         }
+    new_param = {'SYSTEM':{'nbnd':50}}
 
     wannier90_parameters = {
         # 'num_bands':84
@@ -64,7 +65,7 @@ def test_z2pack_inputs(
         # 'structure': generate_structure(),
         'parent_folder':remote,
 
-        # 'pw_parameters': orm.Dict(dict=pw_parameters),
+        'pw_parameters': orm.Dict(dict=new_param),
         'wannier90_parameters': orm.Dict(dict=wannier90_parameters),
 
         'z2pack_settings': orm.Dict(dict=z2pack_settings),

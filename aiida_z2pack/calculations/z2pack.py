@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import six
 
 from aiida import orm
 from aiida.engine import CalcJob
@@ -29,13 +30,6 @@ class Z2packCalculation(CalcJob):
 
     _REVERSE_BUILD_SUBFOLDER     = ".."
 
-    _Z2pack_folder = './'
-    _default_parser      = 'z2pack'  
-
-    ## Default PW output parser provided by AiiDA
-    # to be defined in the subclass
-
-    # _automatic_namelists = {}
 
     _INPUT_PW_SCF_FILE   = 'aiida.scf.in'
     _OUTPUT_PW_SCF_FILE  = 'aiida.scf.out'
@@ -82,6 +76,7 @@ class Z2packCalculation(CalcJob):
     def define(cls, spec):
         super(Z2packCalculation, cls).define(spec)
 
+        spec.input('metadata.options.parser_name', valid_type=six.string_types, default='z2pack.z2pack')
         spec.input(
             'parent_folder', valid_type=orm.RemoteData,
             required=True,
@@ -89,13 +84,18 @@ class Z2packCalculation(CalcJob):
             )
 
         spec.input(
+            'pw_parameters', valid_type=orm.Dict,
+            required=False,
+            help='Dict: Input parameters for the overlap code (pw2wannier).'
+            )
+        spec.input(
             'overlap_parameters', valid_type=orm.Dict,
             required=False,
             help='Dict: Input parameters for the overlap code (pw2wannier).'
             )
         spec.input(
             'wannier90_parameters', valid_type=orm.Dict,
-            default=orm.Dict(dict={}),
+            required=False,
             help='Dict: Input parameters for the wannier code (wannier90).'
             )
 
@@ -106,28 +106,28 @@ class Z2packCalculation(CalcJob):
             )
         spec.input(
             'z2pack_settings', valid_type=orm.Dict, 
-            required=True,
+            required=False,
             help='Use an additional node for special settings.'
             )
 
         spec.input(
             'pw_code', valid_type=orm.Code,
-            required=True,
+            required=False,
             help='NSCF code to be used by z2pack.'
             )
         spec.input(
             'overlap_code', valid_type=orm.Code,
-            required=True,
+            required=False,
             help='Overlap code to be used by z2pack.'
             )
         spec.input(
             'wannier90_code', valid_type=orm.Code, 
-            required=True,
+            required=False,
             help='Wannier code to be used by z2pack.'
             )
         spec.input(
             'code', valid_type=orm.Code, 
-            required=True,
+            required=False,
             help='Z2pack code.'
             )
 
@@ -156,7 +156,7 @@ class Z2packCalculation(CalcJob):
     def prepare_for_submission(self, folder):
         from aiida.common.datastructures import CodeRunMode
 
-        self.inputs.metadata.options.parser_name     = 'z2pack'
+        self.inputs.metadata.options.parser_name     = 'z2pack.z2pack'
         self.inputs.metadata.options.output_filename = self._OUTPUT_Z2PACK_FILE
         self.inputs.metadata.options.input_filename  = self._INPUT_Z2PACK_FILE
 
@@ -204,20 +204,21 @@ class Z2packCalculation(CalcJob):
 
         self.restart_mode = False
         if parent_type == PwCalculation:
-            pw_calc = parent.get_incoming(node_class=PwCalculation).first().node
+            # pw_calc = parent.get_incoming(node_class=PwCalculation).first().node
 
-            pseudos = pw_calc.get_incoming(link_label_filter='pseudos%').all()
-            pseudos_dict = {name[9:]:upf for upf,_,name in pseudos}
+            # pseudos = pw_calc.get_incoming(link_label_filter='pseudos%').all()
+            # pseudos_dict = {name[9:]:upf for upf,_,name in pseudos}
 
-            self.inputs.pw_parameters = pw_calc.get_incoming(link_label_filter='parameters').first().node
-            self.inputs.structure     = pw_calc.get_incoming(link_label_filter='structure').first().node
-            self.inputs.pseudos       = pseudos_dict
-            if not 'pw_settings' in self.inputs:
-                settings = pw_calc.get_incoming(link_label_filter='settings').first()
-                if settings is None:
-                    self.inputs.pw_settings = orm.Dict(dict={})
-                else:
-                    self.inputs.pw_settings = settings
+            # self.inputs.pw_parameters = pw_calc.get_incoming(link_label_filter='parameters').first().node
+            # self.inputs.structure     = pw_calc.get_incoming(link_label_filter='structure').first().node
+            # self.inputs.pseudos       = pseudos_dict
+            # if not 'pw_settings' in self.inputs:
+            #     settings = pw_calc.get_incoming(link_label_filter='settings').first()
+            #     if settings is None:
+            #         self.inputs.pw_settings = orm.Dict(dict={})
+            #     else:
+            #         self.inputs.pw_settings = settings
+            self._set_inputs_from_parent_scf()
 
             prepare_nscf(self, folder)
             prepare_overlap(self, folder)
@@ -251,6 +252,8 @@ class Z2packCalculation(CalcJob):
                 ))
 
         elif parent_type == Z2packCalculation:
+            self._set_inputs_from_parent_z2pack()
+
             settings = self.inputs.z2pack_settings.get_dict()
             self.restart_mode = settings.get('restart_mode', True)
             if self.restart_mode:
@@ -297,7 +300,78 @@ class Z2packCalculation(CalcJob):
         z2pack = parent.get_incoming(node_class=Z2packCalculation)
         if z2pack:
             return Z2packCalculation
-    
+
+    def _merge_dict_inputs_from_parent(self, parent, *input_labels, merge=True):
+        def deep_update(old, new):
+            for k,v in new.items():
+                if isinstance(v, dict) and k in old and isinstance(old[k], dict):
+                    deep_update(old[k], v)
+                else:
+                    old[k] = v  
+            return old
+
+        for label in input_labels:
+            if isinstance(label, tuple):
+                label_old = label[0]
+                label_new = label[1]
+            else:
+                label_old = label_new = label
+            new = {}
+
+            if label_new in self.inputs:
+                new = getattr(self.inputs, label_new).get_dict()
+            
+            old = {}
+            search = parent.get_incoming(link_label_filter=label_old).first()
+            if not search is None:
+                old = search.node.get_dict()
+
+            if merge:
+                # old.update(new)
+                to_set = deep_update(old, new)
+            else:
+                if not new and old:
+                    to_set = old
+                else:
+                    to_set = new
+
+            setattr(self.inputs, label_new, orm.Dict(dict=to_set))
+
+    def _set_inputs_from_parent_scf(self):
+        parent = self.inputs.parent_folder
+        calc   = parent.get_incoming(node_class=PwCalculation).first().node
+
+        pseudos      = calc.get_incoming(link_label_filter='pseudos%').all()
+        pseudos_dict = {name[9:]:upf for upf,_,name in pseudos}
+        self.inputs.pseudos       = pseudos_dict
+        self.inputs.structure     = calc.get_incoming(link_label_filter='structure').first().node
+
+        self._merge_dict_inputs_from_parent(calc, ('parameters', 'pw_parameters'), ('settings','pw_settings'))
+
+    def _set_inputs_from_parent_z2pack(self):
+        parent = self.inputs.parent_folder
+        calc   = parent.get_incoming(node_class=Z2packCalculation).first().node
+
+        for label in ['pw_code', 'overlap_code', 'wannier90_code', 'code']:
+            if  label in self.inputs:
+                continue
+            old = calc.get_incoming(link_label_filter=label).first().node
+            setattr(self.inputs, label, old)
+
+        self._merge_dict_inputs_from_parent(
+            calc,
+            'pw_parameters',
+            merge=True)
+        self._merge_dict_inputs_from_parent(
+            calc,
+            'overlap_parameters',
+            'wannier90_parameters',
+            'pw_settings',
+            'z2pack_settings',
+            merge=False
+            )
+
+
     def use_pseudos_from_family(self, family_name):
         """
         Set the pseudo to use for all atomic kinds, picking pseudos from the
