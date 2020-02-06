@@ -47,7 +47,7 @@ def generate_calc_job():
     to it, into which the raw input files will have been written.
     """
 
-    def _generate_calc_job(folder, entry_point_name, inputs=None):
+    def _generate_calc_job(entry_point_name, inputs=None):
         """Fixture to generate a mock `CalcInfo` for testing calculation jobs."""
         from aiida.engine.utils import instantiate_process
         from aiida.manage.manager import get_manager
@@ -59,9 +59,7 @@ def generate_calc_job():
         process_class = CalculationFactory(entry_point_name)
         process = instantiate_process(runner, process_class, **inputs)
 
-        calc_info = process.prepare_for_submission(folder)
-
-        return calc_info
+        return process
 
     return _generate_calc_job
 
@@ -210,7 +208,7 @@ def generate_remote_data():
     def _generate_remote_data(computer, remote_path, entry_point_name=None, extras_root=[]):
         """Return a `KpointsData` with a mesh of npoints in each direction."""
         from aiida.common.links import LinkType
-        from aiida.orm import CalcJobNode, RemoteData
+        from aiida.orm import CalcJobNode, RemoteData, Dict
         from aiida.plugins.entry_point import format_entry_point_string
 
         entry_point = format_entry_point_string('aiida.calculations', entry_point_name)
@@ -224,7 +222,11 @@ def generate_remote_data():
             remote.add_incoming(creator, link_type=LinkType.CREATE, link_label='remote_folder')
 
             for extra in extras_root:
-                creator.add_incoming(extra[0], link_type=LinkType.INPUT_CALC, link_label=extra[1])
+                to_link = extra[0]
+                if isinstance(to_link, dict):
+                    to_link = Dict(dict=to_link)
+                to_link.store()
+                creator.add_incoming(to_link, link_type=LinkType.INPUT_CALC, link_label=extra[1])
                 
             creator.store()
 

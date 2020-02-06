@@ -1,17 +1,16 @@
 import os
+import pytest
 from aiida import orm
 from aiida.common import datastructures
+from aiida.plugins import CalculationFactory
 
 from aiida_quantumespresso.utils.resources import get_default_options
 
-def test_z2pack_inputs(
-    aiida_profile, fixture_sandbox, generate_calc_job, fixture_code, generate_structure, generate_kpoints_mesh,
-    generate_upf_data, file_regression, generate_remote_data, fixture_localhost
-):
-    """Test a default `PwCalculation`."""
-    entry_point_name = 'z2pack'
+Z2packCalculation = CalculationFactory('z2pack.z2pack')
 
-    pw_parameters = {
+@pytest.fixture()
+def pw_parameters():
+    param = {
         'CONTROL': {
             'calculation': 'scf'
             },
@@ -20,83 +19,62 @@ def test_z2pack_inputs(
             'ecutwfc': 30.0
             }
         }
-    new_param = {'SYSTEM':{'nbnd':50}}
+    return param
 
-    wannier90_parameters = {
-        # 'num_bands':84
-        }
-
+@pytest.fixture()
+def z2pack_settings():
     z2pack_settings = {
-        'mpi_command':'mpirun -np 1',
+        'mpi_command':'mpirun -np 23',
         'dimension_mode':'3D',
         'invariant':'Chern',
         'surface':'lambda t1,t2: [t1, t2, 0]'
         }
+    return z2pack_settings
 
-    upf = generate_upf_data('Si')
-    upf.store()
-    param  = orm.Dict(dict=pw_parameters)
-    param.store()
+def test_z2pack_inputs(
+    aiida_profile, fixture_sandbox, generate_calc_job, fixture_code, generate_structure, generate_kpoints_mesh,
+    generate_upf_data, file_regression, generate_remote_data, fixture_localhost,
+    pw_parameters, z2pack_settings, tmpdir
+):
+    """Test a default `PwCalculation`."""
+    new_param = {'SYSTEM':{'nbnd':50}}
+
+    upf    = generate_upf_data('Si')
     struct = generate_structure()
-    struct.store()
-    pseudo = upf
     remote = generate_remote_data(
-        fixture_localhost, '/tmp',
+        fixture_localhost, str(tmpdir),
         'quantumespresso.pw',
         extras_root=[
-            (param, 'parameters'),
+            (pw_parameters, 'parameters'),
             (struct, 'structure'),
-            (pseudo, 'pseudos__Si'),
+            (upf, 'pseudos__Si'),
             ]
         )
-    try:
-        os.mkdir('/tmp/out')
-        os.mkdir('/tmp/out/aiida.save/')
-    except FileExistsError:
-        pass
-    with open('/tmp/out/aiida.save/data-file-schema.xml', 'w') as f:
-        f.write('123')
-
-    # calc   = remote.get_incoming().first().node
-
+    f = tmpdir.mkdir('out').mkdir('aiida.save').join('data-file-schema.xml')
+    f.write('123')
 
     inputs = {
-        'code': fixture_code('z2pack'),
-        # 'structure': generate_structure(),
+        'code': fixture_code('z2pack.z2pack'),
         'parent_folder':remote,
-
         'pw_parameters': orm.Dict(dict=new_param),
-        'wannier90_parameters': orm.Dict(dict=wannier90_parameters),
-
         'z2pack_settings': orm.Dict(dict=z2pack_settings),
         'pw_code': fixture_code('quantumespresso.pw'),
         'overlap_code': fixture_code('quantumespresso.pw2wannier90'),
         'wannier90_code': fixture_code('wannier90.wannier90'),
-        # 'pseudos': {
-        #     'Si': upf
-        # },
         'metadata': {
             'options': get_default_options()
         }
     }
 
-    # print(inputs)
-
-    calc_info = generate_calc_job(fixture_sandbox, entry_point_name, inputs)
+    process   = generate_calc_job('z2pack.z2pack', inputs)
+    calc_info = process.prepare_for_submission(fixture_sandbox)
 
     inputs   = ['aiida.nscf.in', 'aiida.pw2wan.in', 'aiida.win', 'z2pack_aiida.py']
-    # _outputs = ['aiida.scf.out', 'aiida.nscf.out', 'aiida.pw2wan.out', 'aiida.wout']
     outputs  = ['z2pack_aiida.out', 'save.json', 'results.json']
-    # errors   = ['aiida.werr']
 
-    # cmdline_params = ['-in', 'aiida.scf.in']
     cmdline_params = []
-    # local_copy_list = [(upf.uuid, upf.filename, u'./pseudo/Si.upf')]
     local_copy_list = []
-    # retrieve_list = ['aiida.out', './out/aiida.save/data-file-schema.xml', './out/aiida.save/data-file.xml']
-    # retrieve_list = inputs + outputs + errors
     retrieve_list = outputs
-    # retrieve_temporary_list = [['./out/aiida.save/K*[0-9]/eigenval*.xml', '.', 2]]
     retrieve_temporary_list = []
 
     # Check the attributes of the returned `CalcInfo`
@@ -108,7 +86,6 @@ def test_z2pack_inputs(
     assert sorted(calc_info.remote_symlink_list) == sorted([])
 
     # Checks on the files written to the sandbox folder as raw input
-    # print(os.path.realpath(os.path.curdir))
     retrieved_list = inputs + ['out']
     target = './tests/test_z2pack'
     # import shutil
@@ -132,10 +109,73 @@ def test_z2pack_inputs(
 
         assert base_input == written_input
 
-    # for name in inputs:
-    #     ext = os.path.splitext(name)[1]
-    #     print(name, ext)
-    #     with fixture_sandbox.open(name) as handle:
-    #         input_written = handle.read()
+def test_nested_restart(
+    aiida_profile, generate_calc_job, fixture_code, fixture_sandbox, generate_structure,
+    generate_upf_data, generate_remote_data, fixture_localhost,
+    pw_parameters, z2pack_settings, tmpdir
+    ):
+    """Test a default `PwCalculation`."""
+    tmp_scf      = tmpdir.mkdir('scf')
+    tmp_remote_1 = tmpdir.mkdir('remote_1')
+    tmp_remote_2 = tmpdir.mkdir('remote_2')
 
-    #     file_regression.check(input_written, encoding='utf-8', extension=ext)
+    upf    = generate_upf_data('Si')
+    param  = orm.Dict(dict=pw_parameters)
+    struct = generate_structure()
+
+    pseudo = upf
+    remote_scf = generate_remote_data(
+        fixture_localhost, str(tmp_scf),
+        'quantumespresso.pw',
+        extras_root=[
+            (param, 'parameters'),
+            (struct, 'structure'),
+            (pseudo, 'pseudos__Si'),
+            ]
+        )
+    remote_scf.store()
+
+    pw_code            = fixture_code('quantumespresso.pw')
+    overlap_code       = fixture_code('quantumespresso.pw2wannier90')
+    wannier90_code     = fixture_code('wannier90.wannier90')
+
+    remote_1 = generate_remote_data(
+        fixture_localhost, str(tmp_remote_1),
+        'z2pack.z2pack',
+        extras_root=[
+            ({'SYSTEM':{'lspinorb':True}}, 'pw_parameters'),
+            (z2pack_settings, 'z2pack_settings'),
+            ({}, 'wannier90_settings'),
+            (remote_scf, 'parent_folder'),
+            (pw_code, 'pw_code'),
+            (overlap_code, 'overlap_code'),
+            (wannier90_code, 'wannier90_code'),
+            ]
+        )
+    remote_1.store()
+
+    remote_2 = generate_remote_data(
+        fixture_localhost, str(tmp_remote_2),
+        'z2pack.z2pack',
+        extras_root=[
+            ({'SYSTEM':{'nbnd':50}}, 'pw_parameters'),
+            (remote_1, 'parent_folder')
+            ]
+        )
+
+    inputs = {
+        'code': fixture_code('z2pack.z2pack'),
+        'parent_folder':remote_2,
+        'metadata': {
+            'options': get_default_options()
+        }
+    }
+
+    process   = generate_calc_job('z2pack.z2pack', inputs=inputs)
+    process.prepare_for_submission(fixture_sandbox)
+    
+    test = process.inputs.pw_parameters.get_dict()
+    assert test['SYSTEM']['ecutwfc'] == 30.0
+    assert test['SYSTEM']['nbnd'] == 50
+    assert test['SYSTEM']['lspinorb'] == True
+

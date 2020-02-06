@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 import os
 import six
 
@@ -8,14 +7,11 @@ from aiida.engine import CalcJob
 from aiida.plugins import CalculationFactory
 from aiida.common import datastructures, exceptions
 from aiida.orm.nodes.data.upf import get_pseudos_from_structure
-# from aiida_quantumespresso.calculations.namelists import NamelistsCalculation
 
 from .utils import prepare_nscf, prepare_overlap, prepare_wannier90, prepare_z2pack
-from .utils import merge_dict_inputs_from_parent, get_previous_node, recursive_get_linked_node
+from .utils import merge_dict_input_to_root, recursive_get_linked_node
 
 PwCalculation           = CalculationFactory('quantumespresso.pw')
-# Wannier90Calculation    = CalculationFactory('wannier90.wannier90')
-# Pw2wannier90Calculation = CalculationFactory('quantumespresso.pw2wannier90')
 
 class Z2packCalculation(CalcJob):
     """
@@ -198,27 +194,13 @@ class Z2packCalculation(CalcJob):
         parent = self.inputs.parent_folder
         rpath  = parent.get_remote_path()
         uuid   = parent.computer.uuid
-        parent_type = self._get_parent_type()
+        parent_type = get_parent_type(parent)
 
         save_path       = os.path.join(self._OUTPUT_SUBFOLDER, '{}.save'.format(self._PREFIX))
         remote_xml_path = os.path.join(save_path, PwCalculation._DATAFILE_XML_POST_6_2)
 
         self.restart_mode = False
         if parent_type == PwCalculation:
-            # pw_calc = parent.get_incoming(node_class=PwCalculation).first().node
-
-            # pseudos = pw_calc.get_incoming(link_label_filter='pseudos%').all()
-            # pseudos_dict = {name[9:]:upf for upf,_,name in pseudos}
-
-            # self.inputs.pw_parameters = pw_calc.get_incoming(link_label_filter='parameters').first().node
-            # self.inputs.structure     = pw_calc.get_incoming(link_label_filter='structure').first().node
-            # self.inputs.pseudos       = pseudos_dict
-            # if not 'pw_settings' in self.inputs:
-            #     settings = pw_calc.get_incoming(link_label_filter='settings').first()
-            #     if settings is None:
-            #         self.inputs.pw_settings = orm.Dict(dict={})
-            #     else:
-            #         self.inputs.pw_settings = settings
             self._set_inputs_from_parent_scf()
 
             prepare_nscf(self, folder)
@@ -302,19 +284,6 @@ class Z2packCalculation(CalcJob):
         if z2pack:
             return Z2packCalculation
 
-    def _get_root_parent(self):
-        parent = self.inputs.parent_folder
-        calc   = parent.get_incoming(node_class=Z2packCalculation).first().node
-
-        while True:
-            parent = calc.get_incoming(node_class=orm.RemoteData).first().node
-            try:
-                calc = parent.get_incoming(node_class=Z2packCalculation).first().node
-            except:
-                break
-
-        return calc
-
     def _set_inputs_from_parent_scf(self):
         parent = self.inputs.parent_folder
         calc   = parent.get_incoming(node_class=PwCalculation).first().node
@@ -324,10 +293,10 @@ class Z2packCalculation(CalcJob):
         self.inputs.pseudos       = pseudos_dict
         self.inputs.structure     = calc.get_incoming(link_label_filter='structure').first().node
 
-        merge_dict_inputs_from_parent(
-            calc, PwCalculation,
-            ('parameters', 'pw_parameters'),
-            ('settings','pw_settings')
+        merge_dict_input_to_root(
+            self,
+            ('pw_parameters', 'parameters'),
+            ('pw_settings', 'settings')
             )
 
     def _set_inputs_from_parent_z2pack(self):
@@ -339,20 +308,16 @@ class Z2packCalculation(CalcJob):
             if label in self.inputs:
                 continue
             # old = calc.get_incoming(link_label_filter=label).first().node
-            old = recursive_get_linked_node(calc, label, get_previous_node, Z2packCalculation)
+            old = recursive_get_linked_node(calc, label, Z2packCalculation)
             setattr(self.inputs, label, old)
 
-        merge_dict_inputs_from_parent(
-            calc, Z2packCalculation,
-            'pw_parameters',
-            merge=True)
-        merge_dict_inputs_from_parent(
-            calc, Z2packCalculation,
+        merge_dict_input_to_root(
+            self,
+            ('pw_parameters', 'parameters'),
             'overlap_parameters',
             'wannier90_parameters',
             'pw_settings',
-            'z2pack_settings',
-            merge=False
+            'z2pack_settings'
             )
 
 
@@ -448,3 +413,12 @@ class Z2packCalculation(CalcJob):
         
         
         
+
+def get_parent_type(node):
+    scf = node.get_incoming(node_class=PwCalculation)
+    if scf:
+        return PwCalculation
+
+    z2pack = node.get_incoming(node_class=Z2packCalculation)
+    if z2pack:
+        return Z2packCalculation

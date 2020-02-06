@@ -5,7 +5,10 @@ PwCalculation = CalculationFactory('quantumespresso.pw')
 
 def prepare_wannier90(cls, folder):
     input_filename = folder.get_abs_path(cls._INPUT_W90_FILE)
-    parameters = cls.inputs.wannier90_parameters.get_dict()
+    try:
+        parameters = cls.inputs.wannier90_parameters.get_dict()
+    except:
+        parameters = {}
 
     for k,v in cls._blocked_keywords_wannier90:
         parameters[k] = v
