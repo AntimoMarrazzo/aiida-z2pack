@@ -36,7 +36,7 @@ result = z2pack.surface.run(
     move_tol           = 0.3,
     num_lines          = 11,
     min_neighbour_dist = 0.01,
-    iterator           = range(8, 27, 2),
+    iterator           = range(8, 41, 2),
     save_file          = 'save.json',
     )
 Chern = z2pack.invariant.chern(result)

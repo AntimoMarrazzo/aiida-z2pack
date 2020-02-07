@@ -46,11 +46,11 @@ class Z2packCalculation(CalcJob):
     _OUTPUT_OVERLAP_FILE = 'aiida.pw2wan.out'
 
     _ERROR_W90_FILE      = _SEEDNAME + '.werr'
+    _ERROR_PW_FILE       = 'CRASH'
 
     _DEFAULT_MIN_NEIGHBOUR_DISTANCE = 0.01
     _DEFAULT_NUM_LINES              = 11
-    _DEFAULT_ITERATOR               = 'range(8, 27, 2)'
-
+    _DEFAULT_ITERATOR               = 'range(8, 41, 2)'
     _DEFAULT_GAP_TOLERANCE  = 0.3
     _DEFAULT_MOVE_TOLERANCE = 0.3
     _DEFAULT_POS_TOLERANCE  = 0.01
@@ -73,6 +73,7 @@ class Z2packCalculation(CalcJob):
     def define(cls, spec):
         super(Z2packCalculation, cls).define(spec)
 
+        # INPUTS ###########################################################################
         spec.input('metadata.options.parser_name', valid_type=six.string_types, default='z2pack.z2pack')
         spec.input(
             'parent_folder', valid_type=orm.RemoteData,
@@ -128,27 +129,46 @@ class Z2packCalculation(CalcJob):
             help='Z2pack code.'
             )
 
+        # OUTPUTS ###########################################################################
         spec.output(
             'output_parameters', valid_type=orm.Dict, required=True,
             help='The `output_parameters` output node of the successful calculation.'
             )
         spec.default_output_node = 'output_parameters'
 
+        # EXIT CODES ###########################################################################
         spec.exit_code(
-            199, 'ERROR_UNEXPECTED_FAILURE',
-            message='Something failed during the calulation. Inpsect the \'{}\' file for more information.'.format(cls._ERROR_W90_FILE)
+            100, 'ERROR_UNEXPECTED_FAILURE',
+            message=(
+                'Something failed during the calulation and no output was produced.\n'
+                'Inpsect the stderr file for more information.'
+                )
             )
         spec.exit_code(
-            200, 'ERROR_NO_RETRIEVED_FOLDER',
+            110, 'ERROR_PW_CRASH',
+             message=(
+                'Something failed during the pw/pw2wannier calulation.\n'
+                'Inpsect the \'{}\' file for more information.'.format(cls._ERROR_PW_FILE)
+                )
+            )
+        spec.exit_code(
+            120, 'ERROR_W90_CRASH',
+             message=(
+                'Something failed during the wannier90 calulation.\n'
+                'Inpsect the \'{}\' file for more information.'.format(cls._ERROR_W90_FILE)
+                )
+            )
+        spec.exit_code(
+            130, 'ERROR_NO_RETRIEVED_FOLDER',
             message='The retrieved folder data node could not be accessed.'
             )
+        # spec.exit_code(
+        #     140, 'ERROR_MISSING_Z2PACK_OUTFILE',
+        #     message='The output file of z2pack \'{}\' is missing!'.format(cls._OUTPUT_Z2PACK_FILE)
+        #     )
         spec.exit_code(
-            201, 'ERROR_MISSING_RESULTS_FILE',
+            210, 'ERROR_MISSING_RESULTS_FILE',
             message='The result file \'{}\' is missing!'.format(cls._OUTPUT_RESULT_FILE)
-            )
-        spec.exit_code(
-            202, 'ERROR_MISSING_Z2PACK_OUTFILE',
-            message='The output file of z2pack \'{}\' is missing!'.format(cls._OUTPUT_Z2PACK_FILE)
             )
 
     def prepare_for_submission(self, folder):
@@ -189,8 +209,12 @@ class Z2packCalculation(CalcJob):
             self._OUTPUT_SAVE_FILE,
             self._OUTPUT_RESULT_FILE,
             ]
+        errors = [
+            os.path.join('build', a) for a in [self._ERROR_W90_FILE, self._ERROR_PW_FILE]
+            ]
 
         calcinfo.retrieve_list.extend(outputs)
+        calcinfo.retrieve_list.extend(errors)
 
         parent = self.inputs.parent_folder
         rpath  = parent.get_remote_path()
@@ -234,12 +258,6 @@ class Z2packCalculation(CalcJob):
                     os.path.join(rpath, save_path, 'charge-density.dat'),
                     os.path.join(save_path, 'charge-density.dat'),
                 ))
-            # calcinfo.remote_copy_list.append(
-            #     (
-            #         uuid,
-            #         os.path.join(rpath, save_path, 'paw.txt'),
-            #         os.path.join(save_path, 'paw.txt'),
-            #     ))
 
         elif parent_type == Z2packCalculation:
             self._set_inputs_from_parent_z2pack()

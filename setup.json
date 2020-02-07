@@ -15,7 +15,8 @@
             "z2pack.z2pack = aiida_z2pack.parsers.z2pack:Z2packParser"
         ],
         "aiida.workflows": [
-            "z2pack.3DChern = aiida_z2pack.workchains:Z2pack3DChernWorkChain"
+            "z2pack.base = aiida_z2pack.workchains.base:Z2packBaseWorkChain",
+            "z2pack.3DChern = aiida_z2pack.workchains.chern:Z2pack3DChernWorkChain"
         ]
     },
     "install_requires": [

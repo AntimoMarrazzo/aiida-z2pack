@@ -36,7 +36,7 @@ class Z2pack3DChernWorkChain(WorkChain):
             PwBaseWorkChain, namespace='nscf',
             exclude=('clean_workdir', 'pw.structure'),
             namespace_options={
-                'help': 'Inputs for the `PwBaseWorkChain` for the BANDS calculation.'
+                'help': 'Inputs for the `PwBaseWorkChain` for the NSCF calculation.'
                 }
             )
 

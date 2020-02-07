@@ -19,14 +19,20 @@ class Z2packParser(Parser):
             return self.exit_codes.ERROR_NO_RETRIEVED_FOLDER
 
         # Checks for error output files
-        if Z2packCalculation._ERROR_W90_FILE in out_folder.list_object_names():
+        retrieved_names = out_folder.list_object_names()
+        if Z2packCalculation._ERROR_W90_FILE in retrieved_names:
+            return self.exit_codes.ERROR_W90_CRASH
+        if Z2packCalculation._ERROR_PW_FILE in retrieved_names:
+            return self.exit_codes.ERROR_PW0_CRASH
+        if not Z2packCalculation._OUTPUT_RESULT_FILE in retrieved_names:
+            return self.exit_codes.ERROR_MISSING_RESULTS_FILE
+        if not Z2packCalculation._OUTPUT_Z2PACK_FILE in retrieved_names:
             return self.exit_codes.ERROR_UNEXPECTED_FAILURE
 
-        try:
-            with out_folder.open(Z2packCalculation._OUTPUT_RESULT_FILE) as fil:
-                data = json.load(fil)
-        except OSError:
-            return self.exit_codes.ERROR_MISSING_RESULTS_FILE
+        with out_folder.open(Z2packCalculation._OUTPUT_RESULT_FILE) as f:
+            data = json.load(f)
+        with out_folder.open(Z2packCalculation._OUTPUT_Z2PACK_FILE) as f:
+            out_file = f.readlines()
 
         gap_f   = len(data['convergence_report']['GapCheck']['FAILED'])
         move_f  = len(data['convergence_report']['MoveCheck']['FAILED'])        
@@ -36,11 +42,6 @@ class Z2packParser(Parser):
         
         data['Tests_passed'] = success
         
-        try:
-            with out_folder.open(Z2packCalculation._OUTPUT_Z2PACK_FILE) as fil:
-                out_file = fil.readlines()
-        except OSError:
-            return self.exit_codes.ERROR_MISSING_Z2PACK_OUTFILE
 
         #out_file = out_file.split("\n")
         out_file = [i.strip('\n') for i in out_file]

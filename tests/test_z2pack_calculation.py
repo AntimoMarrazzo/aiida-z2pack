@@ -71,10 +71,11 @@ def test_z2pack_inputs(
 
     inputs   = ['aiida.nscf.in', 'aiida.pw2wan.in', 'aiida.win', 'z2pack_aiida.py']
     outputs  = ['z2pack_aiida.out', 'save.json', 'results.json']
+    errors   = ['build/aiida.werr', 'build/CRASH']
 
     cmdline_params = []
     local_copy_list = []
-    retrieve_list = outputs
+    retrieve_list = outputs + errors
     retrieve_temporary_list = []
 
     # Check the attributes of the returned `CalcInfo`
