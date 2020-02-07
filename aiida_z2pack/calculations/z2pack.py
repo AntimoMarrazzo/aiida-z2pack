@@ -199,6 +199,8 @@ class Z2packCalculation(CalcJob):
 
         save_path       = os.path.join(self._OUTPUT_SUBFOLDER, '{}.save'.format(self._PREFIX))
         remote_xml_path = os.path.join(save_path, PwCalculation._DATAFILE_XML_POST_6_2)
+        paw_name        = 'paw.txt'
+        remote_paw_path = os.path.join(save_path, paw_name)
 
         self.restart_mode = False
         if parent_type == PwCalculation:
@@ -213,6 +215,10 @@ class Z2packCalculation(CalcJob):
             sub_out  = folder.get_subfolder(self._OUTPUT_SUBFOLDER, create=True)
             sub_save = sub_out.get_subfolder('{}.save'.format(self._PREFIX), create=True)
             parent.getfile(remote_xml_path, sub_save.get_abs_path(xml_name))
+            try:
+                parent.getfile(remote_paw_path, sub_save.get_abs_path(paw_name))
+            except:
+                pass
 
             with sub_save.open(xml_name) as f:
                 xml_content = f.read()
@@ -228,12 +234,12 @@ class Z2packCalculation(CalcJob):
                     os.path.join(rpath, save_path, 'charge-density.dat'),
                     os.path.join(save_path, 'charge-density.dat'),
                 ))
-            calcinfo.remote_copy_list.append(
-                (
-                    uuid,
-                    os.path.join(rpath, save_path, 'paw.txt'),
-                    os.path.join(save_path, 'paw.txt'),
-                ))
+            # calcinfo.remote_copy_list.append(
+            #     (
+            #         uuid,
+            #         os.path.join(rpath, save_path, 'paw.txt'),
+            #         os.path.join(save_path, 'paw.txt'),
+            #     ))
 
         elif parent_type == Z2packCalculation:
             self._set_inputs_from_parent_z2pack()
