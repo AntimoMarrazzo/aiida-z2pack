@@ -136,10 +136,10 @@ def prepare_z2pack(cls, folder):
         if cls.restart_mode:
             input_file_lines.append('    load               = True')
         input_file_lines.append('    )')
-        if invariant == 'Z2':
+        if invariant.lower() == 'z2':
             input_file_lines.append('Z2 = z2pack.invariant.z2(result)')
             input_file_lines.append("res_dict['invariant'].update({'Z2':Z2})")
-        elif invariant == 'Chern':
+        elif invariant.lower() == 'chern':
             input_file_lines.append('Chern = z2pack.invariant.chern(result)')
             input_file_lines.append("res_dict['invariant'].update({'Chern':Chern})")
     else:
