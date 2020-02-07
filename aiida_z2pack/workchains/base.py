@@ -98,12 +98,14 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
     def run_scf(self):
         inputs = AttributeDict(self.exposed_inputs(PwBaseWorkChain, namespace='scf'))
         inputs.pw.structure = self.inputs.structure
-        
+
         running = self.submit(PwBaseWorkChain, **inputs)
 
         self.report('launching PwBaseWorkChain<{}> for starting scf'.format(running.pk))
 
         return ToContext(workchain_scf=running)
+        # self.ctx.workchain_scf = AttributeDict()
+        # self.ctx.workchain_scf.is_finished_ok = True
 
     def inspect_scf(self):
         """Inspect the result of the starting scf `PwBaseWorkChain`."""
@@ -121,7 +123,11 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
         Also stop the iterations if the `min_neighbour_distance` convergence parameter drops below the set
         threshold level.
         """
-        return super().should_run_calculation() and self.ctx.current_MND <= self.ctx.MND_threshold
+        # self.report("SHOULD DO?")
+
+        # self.report('{}, {}, {}'.format(self.ctx.is_finished, self.ctx.iteration, self.inputs.max_iterations.value))
+        # self.report('{}, {}'.format(self.ctx.current_MND, self.ctx.MND_threshold))
+        return super().should_run_calculation() and self.ctx.current_MND >= self.ctx.MND_threshold
 
     def prepare_calculation(self):
         self.inputs.z2pack.pw_code = self.inputs.scf.pw.code
