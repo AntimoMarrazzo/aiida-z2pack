@@ -98,7 +98,7 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
     def run_scf(self):
         inputs = AttributeDict(self.exposed_inputs(PwBaseWorkChain, namespace='scf'))
         inputs.pw.structure = self.inputs.structure
-
+        
         running = self.submit(PwBaseWorkChain, **inputs)
 
         self.report('launching PwBaseWorkChain<{}> for starting scf'.format(running.pk))
@@ -125,11 +125,11 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
 
     def prepare_calculation(self):
         self.inputs.z2pack.pw_code = self.inputs.scf.pw.code
+        self.inputs.z2pack.parent_folder = self.ctx.workchain_scf.outputs.remote_data
         settings = self.inputs.z2pack.z2pack_settings.get_dict()
         settings['min_neighbour_dist'] = self.ctx.current_MND
 
         self.inputs.z2pack.z2pack_settings = orm.Dict(dict=settings)
-
 
 
     def results(self):

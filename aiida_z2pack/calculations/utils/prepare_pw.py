@@ -4,7 +4,9 @@ from aiida.plugins import CalculationFactory
 from aiida_quantumespresso.calculations import _uppercase_dict
 
 PwCalculation = CalculationFactory('quantumespresso.pw')
-PwCalculation._use_kpoints = False
+
+class Temp(PwCalculation):
+	_use_kpoints = False
 
 def _prepare_pw(cls, folder, calculation):
 	parameters = copy.deepcopy(cls.inputs.pw_parameters)
@@ -19,7 +21,7 @@ def _prepare_pw(cls, folder, calculation):
 		cls.inputs.structure,
 		]
 
-	input_filecontent, _ = PwCalculation._generate_PWCPinputdata(*arguments)
+	input_filecontent, _ = Temp._generate_PWCPinputdata(*arguments)
 
 	input_filename = getattr(cls, '_INPUT_PW_{}_FILE'.format(calculation.upper()))
 
@@ -27,10 +29,10 @@ def _prepare_pw(cls, folder, calculation):
 		infile.write(input_filecontent)
 
 # def prepare_scf(cls, folder):
-# 	PwCalculation._OUTPUT_SUBFOLDER = cls._OUTPUT_SUBFOLDER
+# 	Temp._OUTPUT_SUBFOLDER = cls._OUTPUT_SUBFOLDER
 # 	_prepare_pw(cls, folder, 'scf')
 
 def prepare_nscf(cls, folder):
-	PwCalculation._OUTPUT_SUBFOLDER = os.path.join(cls._REVERSE_BUILD_SUBFOLDER, cls._OUTPUT_SUBFOLDER)
-	PwCalculation._PSEUDO_SUBFOLDER = os.path.join(cls._REVERSE_BUILD_SUBFOLDER, cls._PSEUDO_SUBFOLDER)
+	Temp._OUTPUT_SUBFOLDER = os.path.join(cls._REVERSE_BUILD_SUBFOLDER, cls._OUTPUT_SUBFOLDER)
+	Temp._PSEUDO_SUBFOLDER = os.path.join(cls._REVERSE_BUILD_SUBFOLDER, cls._PSEUDO_SUBFOLDER)
 	_prepare_pw(cls, folder, 'nscf')
