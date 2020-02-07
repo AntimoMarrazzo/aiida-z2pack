@@ -66,7 +66,9 @@ class Z2packCalculation(CalcJob):
         ]
     _blocked_keywords_wannier90 = [
         ('length_unit','ang'),
-        ('spinors', True)
+        ('spinors', True),
+        ('num_iter', 0),
+        ('use_bloch_phases', True),
         ]
 
     @classmethod
@@ -140,21 +142,21 @@ class Z2packCalculation(CalcJob):
         spec.exit_code(
             100, 'ERROR_UNEXPECTED_FAILURE',
             message=(
-                'Something failed during the calulation and no output was produced.\n'
+                'Something failed during the calulation and no output was produced. '
                 'Inpsect the stderr file for more information.'
                 )
             )
         spec.exit_code(
             110, 'ERROR_PW_CRASH',
              message=(
-                'Something failed during the pw/pw2wannier calulation.\n'
+                'Something failed during the pw/pw2wannier calulation. '
                 'Inpsect the \'{}\' file for more information.'.format(cls._ERROR_PW_FILE)
                 )
             )
         spec.exit_code(
             120, 'ERROR_W90_CRASH',
              message=(
-                'Something failed during the wannier90 calulation.\n'
+                'Something failed during the wannier90 calulation. '
                 'Inpsect the \'{}\' file for more information.'.format(cls._ERROR_W90_FILE)
                 )
             )
@@ -168,7 +170,10 @@ class Z2packCalculation(CalcJob):
         #     )
         spec.exit_code(
             210, 'ERROR_MISSING_RESULTS_FILE',
-            message='The result file \'{}\' is missing!'.format(cls._OUTPUT_RESULT_FILE)
+            message=(
+                'The result file \'{}\' is missing. '
+                'Calculation interrupted by walltime.'.format(cls._OUTPUT_RESULT_FILE)
+                )
             )
 
     def prepare_for_submission(self, folder):

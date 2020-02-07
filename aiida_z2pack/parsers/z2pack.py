@@ -20,14 +20,14 @@ class Z2packParser(Parser):
 
         # Checks for error output files
         retrieved_names = out_folder.list_object_names()
+        if not Z2packCalculation._OUTPUT_Z2PACK_FILE in retrieved_names:
+            return self.exit_codes.ERROR_UNEXPECTED_FAILURE
         if Z2packCalculation._ERROR_W90_FILE in retrieved_names:
             return self.exit_codes.ERROR_W90_CRASH
         if Z2packCalculation._ERROR_PW_FILE in retrieved_names:
             return self.exit_codes.ERROR_PW0_CRASH
         if not Z2packCalculation._OUTPUT_RESULT_FILE in retrieved_names:
             return self.exit_codes.ERROR_MISSING_RESULTS_FILE
-        if not Z2packCalculation._OUTPUT_Z2PACK_FILE in retrieved_names:
-            return self.exit_codes.ERROR_UNEXPECTED_FAILURE
 
         with out_folder.open(Z2packCalculation._OUTPUT_RESULT_FILE) as f:
             data = json.load(f)

@@ -65,6 +65,7 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
             cls.setup,
             cls.run_scf,
             cls.inspect_scf,
+            cls.setup_z2pack,
             while_(cls.should_run_calculation)(
                 cls.prepare_calculation,
                 cls.run_calculation,
@@ -74,14 +75,14 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
             )
 
         spec.expose_outputs(Z2packCalculation)
-
-        spec.exit_code(100, 'ERROR_SUB_PROCESS_FAILED_STARTING_SCF',
+        spec.exit_code(101, 'ERROR_UNRECOVERABLE_FAILURE', message='Can\'t recover. Aborting!')
+        spec.exit_code(111, 'ERROR_SUB_PROCESS_FAILED_STARTING_SCF',
             message='the starting scf PwBaseWorkChain sub process failed')
-        spec.exit_code(200, 'ERROR_NOT_CONVERGED',
+        spec.exit_code(201, 'ERROR_NOT_CONVERGED',
             message='Calculation finished, but convergence not achieved.')
-        spec.exit_code(210, 'ERROR_POS_TOL_CONVERGENCE_FAILED',
+        spec.exit_code(211, 'ERROR_POS_TOL_CONVERGENCE_FAILED',
             message='WCCs position is not stable when increasing k-points on a line.')
-        spec.exit_code(220, 'ERROR_GAP_TOL_CONVERGENCE_FAILED',
+        spec.exit_code(221, 'ERROR_GAP_TOL_CONVERGENCE_FAILED',
             message='Position of largest gap between WCCs varies too much between neighboring lines.')
 
     def setup(self):
@@ -92,8 +93,8 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
         except:
             self.ctx.current_MND = Z2packCalculation._DEFAULT_MIN_NEIGHBOUR_DISTANCE
 
-        self.ctx.MND_threshold    = self.inputs.min_neighbour_distance_threshold_minimum
-        self.ctx.MND_scale_factor = self.inputs.min_neighbour_distance_scale_factor
+        self.ctx.MND_threshold    = self.inputs.min_neighbour_distance_threshold_minimum.value
+        self.ctx.MND_scale_factor = self.inputs.min_neighbour_distance_scale_factor.value
 
     def run_scf(self):
         inputs = AttributeDict(self.exposed_inputs(PwBaseWorkChain, namespace='scf'))
@@ -104,6 +105,8 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
         self.report('launching PwBaseWorkChain<{}> for starting scf'.format(running.pk))
 
         return ToContext(workchain_scf=running)
+        # from aiida.orm.utils import load_node
+        # self.ctx.workchain_scf = load_node(5886)
         # self.ctx.workchain_scf = AttributeDict()
         # self.ctx.workchain_scf.is_finished_ok = True
 
@@ -123,42 +126,53 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
         Also stop the iterations if the `min_neighbour_distance` convergence parameter drops below the set
         threshold level.
         """
-        # self.report("SHOULD DO?")
+        self.report("SHOULD DO?")
 
-        # self.report('{}, {}, {}'.format(self.ctx.is_finished, self.ctx.iteration, self.inputs.max_iterations.value))
-        # self.report('{}, {}'.format(self.ctx.current_MND, self.ctx.MND_threshold))
+        self.report('{}, {}, {}'.format(self.ctx.is_finished, self.ctx.iteration, self.inputs.max_iterations.value))
+        self.report('{}, {}'.format(self.ctx.current_MND, self.ctx.MND_threshold))
         return super().should_run_calculation() and self.ctx.current_MND >= self.ctx.MND_threshold
 
+    def setup_z2pack(self):
+        inputs = AttributeDict(self.exposed_inputs(Z2packCalculation, 'z2pack'))
+        inputs.pw_code = self.inputs.scf.pw.code
+        inputs.parent_folder = self.ctx.workchain_scf.outputs.remote_folder
+        inputs.z2pack_settings = inputs.z2pack_settings.get_dict()
+
+        if not 'wannier90_parameters' in inputs:
+            inputs.wannier90_parameters = self._autoset_wannier90_paremters()
+        else:
+            params = inputs.wannier90_parameters
+            if any(not var in params for var in ['num_wann', 'num_bands', 'exclude_bands']):
+                inputs.wannier90_parameters = self._autoset_wannier90_paremters()
+
+        self.ctx.inputs = inputs
+
     def prepare_calculation(self):
-        self.inputs.z2pack.pw_code = self.inputs.scf.pw.code
-        self.inputs.z2pack.parent_folder = self.ctx.workchain_scf.outputs.remote_data
-        settings = self.inputs.z2pack.z2pack_settings.get_dict()
-        settings['min_neighbour_dist'] = self.ctx.current_MND
-
-        self.inputs.z2pack.z2pack_settings = orm.Dict(dict=settings)
-
+        self.ctx.inputs.z2pack_settings['min_neighbour_dist'] = self.ctx.current_MND
 
     def results(self):
-        """Attach the output parameters and structure of the last workchain to the outputs."""
-        # if self.ctx.is_converged and self.ctx.iteration <= self.inputs.max_meta_convergence_iterations.value:
-        #     self.report('workchain completed after {} iterations'.format(self.ctx.iteration))
-        # else:
-        #     self.report('maximum number of meta convergence iterations exceeded')
+        """Attach the output parameters of the last workchain to the outputs."""
 
         final_calc = self.ctx.calculations[-1]
         self.out('output_parameters', final_calc.outputs.output_parameters)
 
-        # # Get the latest workchain, which is either the workchain_scf if it ran or otherwise the last regular workchain
-        # try:
-        #     workchain = self.ctx.workchain_scf
-        #     structure = workchain.inputs.pw__structure
-        # except AttributeError:
-        #     workchain = self.ctx.workchains[-1]
-        #     structure = workchain.outputs.output_structure
+    def _autoset_wannier90_paremters(self):
+        self.report("Required w90 parameters are missing. Guessing them from the output of the scf calculation.")
+        pw_params = self.ctx.workchain_scf.outputs.output_parameters.get_dict()
+        n_bnd     = pw_params['number_of_bands']
+        n_el      = pw_params['number_of_electrons']
+        spin      = pw_params['spin_orbit_calculation']
 
-        # self.out_many(self.exposed_outputs(workchain, PwBaseWorkChain))
-        # self.out('output_structure', structure)
+        if not spin:
+            n_el /= 2
+        n_el = int(n_el)
 
+        w90_params = {}
+        w90_params['num_wann'] = n_el
+        w90_params['num_bands'] = n_el
+        w90_params['exclude_bands'] = [n_el+1, n_bnd]
+
+        return w90_params
 
     def _handle_calculation_sanity_checks(self, calculation):
         """Check if the calculation fnished but did not reach convergence."""
@@ -223,33 +237,6 @@ def _handle_not_converged(self, calculation):
 
     self.ctx.is_converged = True
     return ErrorHandlerReport(True, True)
-# @register_error_handler(Z2packBaseWorkChain, 560)
-# def _handle_relax_recoverable_ionic_convergence_error(self, calculation):
-#     """Handle various exit codes for recoverable `vc-relax` or `relax` calculations with failed ionic convergence.
 
-#     These exit codes signify that the ionic convergence thresholds were not met, but the output structure is usable, so
-#     the solution is to simply restart from scratch but from the output structure.
-#     """
-#     exit_code_labels = [
-#         'ERROR_IONIC_CONVERGENCE_NOT_REACHED',
-#         'ERROR_IONIC_CYCLE_EXCEEDED_NSTEP',
-#         'ERROR_IONIC_CYCLE_BFGS_HISTORY_FAILURE',
-#         'ERROR_IONIC_CYCLE_BFGS_HISTORY_AND_FINAL_SCF_FAILURE',
-#     ]
-
-#     if calculation.exit_status in PwCalculation.get_exit_statuses(exit_code_labels):
-#         self.ctx.restart_calc = None
-#         self.ctx.inputs.structure = calculation.outputs.output_structure
-#         action = 'no ionic convergence but clean shutdown: restarting from scratch but using output structure.'
-#         self.report_error_handled(calculation, action)
-#         return ErrorHandlerReport(True, True)
-
-# from aiida.engine import calcfunction
-# @calcfunction
-# def update_min_neighbour_dist(settings, value):
-#     settings = settings.get_dict()
-#     settings['min_neighbour_dist'] = value.value
-
-#     return orm.Dict(dict=settings)
 
 
