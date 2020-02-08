@@ -143,6 +143,10 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
 
     def prepare_calculation(self):
         self.ctx.inputs.z2pack_settings['min_neighbour_dist'] = self.ctx.current_MND
+        if self.ctx.iteration > 0:
+            previous = self.ctx.calculations[-1]
+            remote   = previous.outputs.remote_folder 
+            self.ctx.inputs.parent_folder = remote
 
     def results(self):
         """Attach the output parameters of the last workchain to the outputs."""
