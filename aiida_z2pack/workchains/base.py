@@ -202,6 +202,7 @@ def _handle_not_converged(self, calculation):
     #     settings = {}
     param = calculation.outputs.output_parameters
 
+    self.ctx.is_converged = False
     if not param['Tests_passed']:
         report = param['convergence_report']
         # self.report_error_handled('calculation<{}> did not achieve convergence.')
