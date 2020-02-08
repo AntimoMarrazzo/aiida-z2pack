@@ -1,5 +1,5 @@
 from aiida.common import exceptions
-from aiida_quantumespresso.calculations import _uppercase_dict, _lowercase_dict
+from aiida_quantumespresso.calculations import _lowercase_dict
 
 def prepare_z2pack(cls, folder):
     input_filename = folder.get_abs_path(cls._INPUT_Z2PACK_FILE)
@@ -16,17 +16,10 @@ def prepare_z2pack(cls, folder):
     except KeyError:
         raise exceptions.InputValidationError("No Wannier90 code specified for this calculation")
     
-
     try:
         settings_dict = _lowercase_dict(cls.inputs.z2pack_settings.get_dict(), dict_name='z2pack_settings')
-        # settings_dict = cls.inputs.settings.get_dict()
     except:
-        raise exceptions.InputValidationError("No settings code specified for this calculation")          
-
-    try:
-        mpi_command = settings_dict['mpi_command']
-    except KeyError:
-        raise exceptions.InputValidationError("No mpi_command code specified for this calculation")
+        raise exceptions.InputValidationError("No settings specified for this calculation")          
 
     if not 'npools' in settings_dict:
         pools_cmd = ''
@@ -47,6 +40,13 @@ def prepare_z2pack(cls, folder):
     except KeyError:
         raise exceptions.InputValidationError("No invariant specified for this calculation")
 
+    computer           = cls.inputs.pw_code.computer
+    proc_per_machine   = computer.get_default_mpiprocs_per_machine()
+    n_machines         = cls.inputs.metadata.options.resources['num_machines']
+    mpi_procs          = proc_per_machine * n_machines
+    mpi_command        = computer.get_mpirun_command()
+    mpi_command        = ' '.join(mpi_command).format(tot_num_mpiprocs=mpi_procs)
+
     pos_tol            = settings_dict.get('pos_tol', cls._DEFAULT_POS_TOLERANCE)
     gap_tol            = settings_dict.get('gap_tol', cls._DEFAULT_GAP_TOLERANCE)
     move_tol           = settings_dict.get('move_tol', cls._DEFAULT_MOVE_TOLERANCE)
@@ -66,14 +66,8 @@ def prepare_z2pack(cls, folder):
             raise exceptions.InputValidationError("A surface must be specified for dim_mode==3D ")
     
     input_file_lines=[]
-    input_file_lines.append('#!/usr/bin/env python3')
-    input_file_lines.append('import sys')
-    #input_file_lines.append('sys.path.append('+"'"+'./Z2pack'+"'"+')')
+    input_file_lines.append('#!/usr/bin/env python')
     input_file_lines.append('import z2pack')
-    input_file_lines.append('import os')
-    input_file_lines.append('import shutil')
-    input_file_lines.append('import subprocess')
-    input_file_lines.append('import xml.etree.ElementTree as ET')
     input_file_lines.append('import json')
 
     nscf_cmd      = ' {} {}'.format(mpi_command, pw_code.get_execname())
@@ -115,17 +109,17 @@ def prepare_z2pack(cls, folder):
         )
 
     input_file_lines.append("")
-    if(prepend_code!=''):
+    if prepend_code!='':
         input_file_lines.append("\t"+prepend_code)
-    if (dim_mode=='2D' or dim_mode=='3D'):       
+    if dim_mode=='2D' or dim_mode=='3D':       
         input_file_lines.append('result = z2pack.surface.run(')
         input_file_lines.append('    system             = system,')
-        if(dim_mode=='2D'):
-            if (invariant=='Z2'):
+        if dim_mode=='2D':
+            if invariant=='Z2':
                 input_file_lines.append('    surface            = lambda t1,t2: [t2, t1/2, 0],')
-            elif (invariant=='Chern'):
+            elif invariant=='Chern':
                 input_file_lines.append('    surface            = lambda t1,t2: [t1, t2, 0],')
-        elif(dim_mode=='3D'):
+        elif dim_mode=='3D':
             input_file_lines.append('    surface            = ' + surface + ',')
         input_file_lines.append('    pos_tol            = ' + str(pos_tol) + ',')
         input_file_lines.append('    gap_tol            = ' + str(gap_tol) + ',')
@@ -137,6 +131,7 @@ def prepare_z2pack(cls, folder):
         if cls.restart_mode:
             input_file_lines.append('    load               = True')
         input_file_lines.append('    )')
+
         if invariant.lower() == 'z2':
             input_file_lines.append('Z2 = z2pack.invariant.z2(result)')
             input_file_lines.append("res_dict['invariant'].update({'Z2':Z2})")
@@ -144,8 +139,7 @@ def prepare_z2pack(cls, folder):
             input_file_lines.append('Chern = z2pack.invariant.chern(result)')
             input_file_lines.append("res_dict['invariant'].update({'Chern':Chern})")
     else:
-        raise TypeError("Only dimension_mode 2D and 3D"
-                    "are currently implemented.")
+        raise exceptions.InputValidationError("Only dimension_mode 2D and 3D are currently implemented.")
     
     input_file_lines.append("")
     input_file_lines.append("gap_check['PASSED']  = "

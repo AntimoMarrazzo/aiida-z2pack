@@ -25,9 +25,6 @@ class Z2packCalculation(CalcJob):
     _INPUT_SUBFOLDER     = "./out/" #Still used by some workchains?
     _OUTPUT_SUBFOLDER    = "./out/"
 
-    _REVERSE_BUILD_SUBFOLDER     = ".."
-
-
     _INPUT_PW_SCF_FILE   = 'aiida.scf.in'
     _OUTPUT_PW_SCF_FILE  = 'aiida.scf.out'
 
@@ -57,7 +54,6 @@ class Z2packCalculation(CalcJob):
 
     _blocked_keywords_pw = PwCalculation._blocked_keywords
     _blocked_keywords_overlap = [
-        # ('INPUTPP', 'outdir', os.path.join(_REVERSE_BUILD_SUBFOLDER, _OUTPUT_SUBFOLDER)),
         ('INPUTPP', 'outdir', _OUTPUT_SUBFOLDER),
         ('INPUTPP', 'prefix', _PREFIX),
         ('INPUTPP', 'seedname', _SEEDNAME),
@@ -238,31 +234,6 @@ class Z2packCalculation(CalcJob):
             prepare_nscf(self, folder)
             prepare_overlap(self, folder)
             prepare_wannier90(self, folder)
-
-            # Hack the data-file-schema.xml to get pseudos from ../pseudo instead of ./pseudo
-            # xml_name = PwCalculation._DATAFILE_XML_POST_6_2
-            # sub_out  = folder.get_subfolder(self._OUTPUT_SUBFOLDER, create=True)
-            # sub_save = sub_out.get_subfolder('{}.save'.format(self._PREFIX), create=True)
-            # parent.getfile(remote_xml_path, sub_save.get_abs_path(xml_name))
-            # try:
-            #     parent.getfile(remote_paw_path, sub_save.get_abs_path(paw_name))
-            # except:
-            #     pass
-
-            # with sub_save.open(xml_name) as f:
-            #     xml_content = f.read()
-
-            # xml_content = xml_content.replace('./pseudo', '../pseudo')
-
-            # with sub_save.open(xml_name, 'w') as f:
-            #     f.write(xml_content)
-
-            # calcinfo.remote_copy_list.append(
-            #     (
-            #         uuid,
-            #         os.path.join(rpath, save_path, 'charge-density.dat'),
-            #         os.path.join(save_path, 'charge-density.dat'),
-            #     ))
 
         elif parent_type == Z2packCalculation:
             self._set_inputs_from_parent_z2pack()
