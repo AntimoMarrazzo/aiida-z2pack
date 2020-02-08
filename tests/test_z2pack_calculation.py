@@ -87,7 +87,7 @@ def test_z2pack_inputs(
     assert sorted(calc_info.remote_symlink_list) == sorted([])
 
     # Checks on the files written to the sandbox folder as raw input
-    retrieved_list = inputs + ['out']
+    retrieved_list = inputs
     target = './tests/fixtures/calculation'
     # import shutil
     # for name in inputs:

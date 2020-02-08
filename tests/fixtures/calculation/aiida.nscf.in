@@ -1,8 +1,8 @@
 &CONTROL
   calculation = 'nscf'
-  outdir = '.././out/'
+  outdir = './out/'
   prefix = 'aiida'
-  pseudo_dir = '.././pseudo/'
+  pseudo_dir = './pseudo/'
   verbosity = 'high'
 /
 &SYSTEM

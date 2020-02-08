@@ -1,5 +1,7 @@
 length_unit = ang
+num_iter = 0
 spinors = .true.
+use_bloch_phases = .true.
 
 begin atoms_cart
 ang

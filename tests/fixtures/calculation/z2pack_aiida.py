@@ -1,16 +1,12 @@
-#!/usr/bin/env python3
-import sys
+#!/usr/bin/env python
 import z2pack
-import os
-import shutil
-import subprocess
-import xml.etree.ElementTree as ET
 import json
 
 z2cmd =(
+    'ln -s ../out .; ln -s ../pseudo .;'
     ' /bin/true aiida -pp;' +
-    ' mpirun -np 23 /bin/true < aiida.nscf.in >& aiida.nscf.out;' +
-    ' mpirun -np 23 /bin/true < aiida.pw2wan.in  >& aiida.pw2wan.out;'
+    ' mpirun -np 1 /bin/true < aiida.nscf.in >& aiida.nscf.out;' +
+    ' mpirun -np 1 /bin/true < aiida.pw2wan.in  >& aiida.pw2wan.out;'
 )
 
 input_files = ['aiida.nscf.in', 'aiida.pw2wan.in', 'aiida.win']
