@@ -57,8 +57,8 @@ class Z2packCalculation(CalcJob):
 
     _blocked_keywords_pw = PwCalculation._blocked_keywords
     _blocked_keywords_overlap = [
-        ('INPUTPP', 'outdir', os.path.join(_REVERSE_BUILD_SUBFOLDER, _OUTPUT_SUBFOLDER)),
-        # ('INPUTPP', 'outdir', _OUTPUT_SUBFOLDER),
+        # ('INPUTPP', 'outdir', os.path.join(_REVERSE_BUILD_SUBFOLDER, _OUTPUT_SUBFOLDER)),
+        ('INPUTPP', 'outdir', _OUTPUT_SUBFOLDER),
         ('INPUTPP', 'prefix', _PREFIX),
         ('INPUTPP', 'seedname', _SEEDNAME),
         ('INPUTPP', 'write_amn', False),
@@ -226,10 +226,10 @@ class Z2packCalculation(CalcJob):
         uuid   = parent.computer.uuid
         parent_type = get_parent_type(parent)
 
-        save_path       = os.path.join(self._OUTPUT_SUBFOLDER, '{}.save'.format(self._PREFIX))
-        remote_xml_path = os.path.join(save_path, PwCalculation._DATAFILE_XML_POST_6_2)
-        paw_name        = 'paw.txt'
-        remote_paw_path = os.path.join(save_path, paw_name)
+        # save_path       = os.path.join(self._OUTPUT_SUBFOLDER, '{}.save'.format(self._PREFIX))
+        # remote_xml_path = os.path.join(save_path, PwCalculation._DATAFILE_XML_POST_6_2)
+        # paw_name        = 'paw.txt'
+        # remote_paw_path = os.path.join(save_path, paw_name)
 
         self.restart_mode = False
         if parent_type == PwCalculation:
@@ -240,29 +240,29 @@ class Z2packCalculation(CalcJob):
             prepare_wannier90(self, folder)
 
             # Hack the data-file-schema.xml to get pseudos from ../pseudo instead of ./pseudo
-            xml_name = PwCalculation._DATAFILE_XML_POST_6_2
-            sub_out  = folder.get_subfolder(self._OUTPUT_SUBFOLDER, create=True)
-            sub_save = sub_out.get_subfolder('{}.save'.format(self._PREFIX), create=True)
-            parent.getfile(remote_xml_path, sub_save.get_abs_path(xml_name))
-            try:
-                parent.getfile(remote_paw_path, sub_save.get_abs_path(paw_name))
-            except:
-                pass
+            # xml_name = PwCalculation._DATAFILE_XML_POST_6_2
+            # sub_out  = folder.get_subfolder(self._OUTPUT_SUBFOLDER, create=True)
+            # sub_save = sub_out.get_subfolder('{}.save'.format(self._PREFIX), create=True)
+            # parent.getfile(remote_xml_path, sub_save.get_abs_path(xml_name))
+            # try:
+            #     parent.getfile(remote_paw_path, sub_save.get_abs_path(paw_name))
+            # except:
+            #     pass
 
-            with sub_save.open(xml_name) as f:
-                xml_content = f.read()
+            # with sub_save.open(xml_name) as f:
+            #     xml_content = f.read()
 
-            xml_content = xml_content.replace('./pseudo', '../pseudo')
+            # xml_content = xml_content.replace('./pseudo', '../pseudo')
 
-            with sub_save.open(xml_name, 'w') as f:
-                f.write(xml_content)
+            # with sub_save.open(xml_name, 'w') as f:
+            #     f.write(xml_content)
 
-            calcinfo.remote_copy_list.append(
-                (
-                    uuid,
-                    os.path.join(rpath, save_path, 'charge-density.dat'),
-                    os.path.join(save_path, 'charge-density.dat'),
-                ))
+            # calcinfo.remote_copy_list.append(
+            #     (
+            #         uuid,
+            #         os.path.join(rpath, save_path, 'charge-density.dat'),
+            #         os.path.join(save_path, 'charge-density.dat'),
+            #     ))
 
         elif parent_type == Z2packCalculation:
             self._set_inputs_from_parent_z2pack()
@@ -280,24 +280,28 @@ class Z2packCalculation(CalcJob):
             calcinfo.remote_copy_list.extend(
                 [(uuid, os.path.join(rpath, inp), inp) for inp in inputs]
                 )
-            calcinfo.remote_copy_list.append(
-                (
-                    uuid,
-                    os.path.join(rpath, save_path),
-                    save_path,
-                ))
+            # calcinfo.remote_copy_list.append(
+            #     (
+            #         uuid,
+            #         os.path.join(rpath, save_path),
+            #         save_path,
+            #     ))
         else:
             raise exceptions.ValidationError(
                 "parent node must be either from a PWscf or a Z2pack calculation."
                 )
 
 
-        calcinfo.remote_copy_list.append(
-            (
-                uuid,
-                os.path.join(rpath, self._PSEUDO_SUBFOLDER),
-                self._PSEUDO_SUBFOLDER
-            ))
+        # calcinfo.remote_copy_list.append(
+        #     (
+        #         uuid,
+        #         os.path.join(rpath, self._PSEUDO_SUBFOLDER),
+        #         self._PSEUDO_SUBFOLDER
+        #     ))
+        parent_files = [self._PSEUDO_SUBFOLDER, self._OUTPUT_SUBFOLDER]
+        calcinfo.remote_copy_list.extend(
+            [(uuid, os.path.join(rpath, fname), fname) for fname in parent_files]
+            )
 
         prepare_z2pack(self, folder)
 

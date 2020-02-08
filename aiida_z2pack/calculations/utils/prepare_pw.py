@@ -33,6 +33,6 @@ def _prepare_pw(cls, folder, calculation):
 # 	_prepare_pw(cls, folder, 'scf')
 
 def prepare_nscf(cls, folder):
-	Temp._OUTPUT_SUBFOLDER = os.path.join(cls._REVERSE_BUILD_SUBFOLDER, cls._OUTPUT_SUBFOLDER)
-	Temp._PSEUDO_SUBFOLDER = os.path.join(cls._REVERSE_BUILD_SUBFOLDER, cls._PSEUDO_SUBFOLDER)
+	# Temp._OUTPUT_SUBFOLDER = os.path.join(cls._REVERSE_BUILD_SUBFOLDER, cls._OUTPUT_SUBFOLDER)
+	# Temp._PSEUDO_SUBFOLDER = os.path.join(cls._REVERSE_BUILD_SUBFOLDER, cls._PSEUDO_SUBFOLDER)
 	_prepare_pw(cls, folder, 'nscf')
