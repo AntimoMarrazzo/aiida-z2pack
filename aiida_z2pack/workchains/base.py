@@ -148,11 +148,11 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
             remote   = previous.outputs.remote_folder 
             self.ctx.inputs.parent_folder = remote
 
-    def results(self):
-        """Attach the output parameters of the last workchain to the outputs."""
+    # def results(self):
+    #     """Attach the output parameters of the last workchain to the outputs."""
 
-        final_calc = self.ctx.calculations[-1]
-        self.out('output_parameters', final_calc.outputs.output_parameters)
+    #     final_calc = self.ctx.calculations[-1]
+    #     self.out('output_parameters', final_calc.outputs.output_parameters)
 
     def _autoset_wannier90_paremters(self):
         self.report("Required w90 parameters are missing. Guessing them from the output of the scf calculation.")
