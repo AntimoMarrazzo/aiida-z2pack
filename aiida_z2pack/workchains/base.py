@@ -120,16 +120,10 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
 
     def should_run_calculation(self):
         """Return whether a new calculation should be run.
-
-        This is the case as long as the last calculation has not finished successfully and the maximum number of
-        restarts has not yet been exceeded.
+        Same behaviour as the BaseRestartWorkChain from the qe plugin. 
         Also stop the iterations if the `min_neighbour_distance` convergence parameter drops below the set
         threshold level.
         """
-        self.report("SHOULD DO?")
-
-        self.report('{}, {}, {}'.format(self.ctx.is_finished, self.ctx.iteration, self.inputs.max_iterations.value))
-        self.report('{}, {}'.format(self.ctx.current_MND, self.ctx.MND_threshold))
         return super().should_run_calculation() and self.ctx.current_MND >= self.ctx.MND_threshold
 
     def setup_z2pack(self):
@@ -170,7 +164,7 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
         w90_params = {}
         w90_params['num_wann'] = n_el
         w90_params['num_bands'] = n_el
-        w90_params['exclude_bands'] = [n_el+1, n_bnd]
+        w90_params['exclude_bands'] = [*range(n_el+1, n_bnd+1)]
 
         return w90_params
 
