@@ -203,8 +203,9 @@ def _handle_not_converged(self, calculation):
     param = calculation.outputs.output_parameters
 
     if not param['Tests_passed']:
+        report = param['convergence_report']
         # self.report_error_handled('calculation<{}> did not achieve convergence.')
-        if len(param['PosCheck']['FAILED']):
+        if len(report['PosCheck']['FAILED']):
             # pos_tol  = settings.get('pos_tol', Z2packCalculation._DEFAULT_POS_TOLERANCE)
             # iterator = settings.get('iterator', Z2packCalculation._DEFAULT_ITERATOR)
             # self.report_error_handled('Convergence across line failed with `pos_tol={}` and `iterator={}`'.format(
@@ -221,7 +222,7 @@ def _handle_not_converged(self, calculation):
         #     #     ))
         #     return ErrorHandlerReport(True, True, self.exit_codes.ERROR_GAP_TOL_CONVERGENCE_FAILED)
 
-        if len(param['MoveCheck']['FAILED']) or len(param['GapCheck']['FAILED']):
+        if len(report['MoveCheck']['FAILED']) or len(report['GapCheck']['FAILED']):
             self.ctx.current_MND /= self.ctx.MND_scale_factor
             self.report_error_handled(
                 calculation,
