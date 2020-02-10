@@ -275,13 +275,14 @@ class FindCrossingsWorkChain(WorkChain):
 
         self.ctx.failed_find = 0
 
+        self.ctx.do_loop = True
         self.ctx.found_crossings = []
 
         self.report('Starting loop to find bands crossings.')
 
     def should_find_zero_gap(self):
         """Limit iterations over kpoints meshes."""
-        return self.ctx.iteration < self.ctx.max_iteration
+        return self.ctx.iteration < self.ctx.max_iteration and self.ctx.do_loop
 
     def setup_grid(self):
         mesh = self.ctx.current_mesh
@@ -381,7 +382,7 @@ class FindCrossingsWorkChain(WorkChain):
             gaps   = gaps[where]
 
 
-        self.ctx.found_some = bool(len(self.ctx.pinned_points))
+        self.ctx.found_some = bool(len(pinned))
 
         res = []
         for kpt, gap in zip(pinned, gaps):
@@ -417,15 +418,23 @@ class FindCrossingsWorkChain(WorkChain):
 
             new = max(ccr/scr, mcr)
             self.ctx.current_crop_radius = new
-            self.report('Crop radius reduced to `{}`'.format(new))
+            
         else:
-            self.report('WARNING: no points with small gap found!')
+            self.report('No points with small gap found in this iteraton.')
             self.ctx.failed_find += 1
             if self.ctx.failed_find > 1:
-                return self.exit_codes.ERROR_CANT_PINPOINT_LOWGAP_ZONE
+                if self.ctx.found_crossings:
+                    self.ctx.do_loop = False
+                    return
+                else:
+                    self.report('Failed to find a low_gap point after two consecutive iterations.'.format(new))
+                    return self.exit_codes.ERROR_CANT_PINPOINT_LOWGAP_ZONE
 
     def results(self):
-        if self.ctx.iteration >= self.ctx.max_iteration:
+        calculation = self.ctx.workchain_nscf[self.ctx.iteration - 1]
+        if self.ctx.iteration >= self.ctx.max_iteration and not self.ctx.found_crossings:
+            self.report('reached the maximum number of iterations {}: last ran PwBaseWorkChain<{}>'.format(
+                self.ctx.max_iteration, self.ctx.calc_name, calculation.pk))
             return self.exit_codes.ERROR_MAXIMUM_ITERATIONS_EXCEEDED
 
         app = np.unique(np.array(self.ctx.found_crossings), axis=0)
