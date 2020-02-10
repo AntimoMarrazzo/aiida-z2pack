@@ -1,4 +1,6 @@
 import numpy as np
+from scipy.spatial import KDTree
+
 from aiida import orm
 from aiida.common import AttributeDict
 from aiida.plugins import WorkflowFactory, CalculationFactory, DataFactory
@@ -359,13 +361,30 @@ class FindCrossingsWorkChain(WorkChain):
 
         where     = np.where(gaps < self.ctx.current_gap_threshold)
 
-        self.ctx.pinned_points = list(zip(kpoints[where], gaps[where]))
+        self.ctx.pinned_points = kpoints[where]
+        self.ctx.pinned_gaps   = gaps[where]
+
 
     def post_analysis(self):
         """Sort found kpoints into `found_crossing` if the gap is lower then `min_gap_threshold` or
         `pinned_points` otherwise"""
+        pinned = np.array(self.ctx.pinned_points)
+        gaps   = np.array(self.ctx.pinned_gaps)
+        if self.ctx.found_crossings:
+            found = KDTree(self.ctx.found_crossings)
+            curr  = KDTree(self.ctx.pinned_points)
+
+            query = curr.query_ball_tree(found, r=self.ctx.min_crop_radius/5.)
+            where = [n for n,l in enumerate(query) if not l]
+
+            pinned = pinned[where]
+            gaps   = gaps[where]
+
+
+        self.ctx.found_some = bool(len(self.ctx.pinned_points))
+
         res = []
-        for kpt, gap in self.ctx.pinned_points:
+        for kpt, gap in zip(pinned, gaps):
             if gap < self.ctx.min_gap_threshold:
                 self.ctx.found_crossings.append(kpt)
             else:
@@ -378,8 +397,8 @@ class FindCrossingsWorkChain(WorkChain):
         """Perform the loop step operation of modifying the thresholds"""
         self.ctx.current_mesh = self.ctx.current_mesh * self.ctx.scale_mesh
 
-        n_pinned = len(self.ctx.pinned_points)
-        if n_pinned > 0:
+        n_found = len(self.ctx.pinned_points) + len(self.ctx.found_crossings)
+        if self.ctx.found_some:
             self.ctx.failed_find = 0
 
             cgt = self.ctx.current_gap_threshold
@@ -390,7 +409,7 @@ class FindCrossingsWorkChain(WorkChain):
             mcr = self.ctx.min_crop_radius
             scr = self.ctx.scale_crop_radius
 
-            self.report('`{}` points found with gap lower than the threshold `{}`'.format(n_pinned, cgt))
+            self.report('`{}` points found with gap lower than the threshold `{}`'.format(n_found, cgt))
 
             new = max(cgt/sgt, mgt)
             self.ctx.current_gap_threshold = new
