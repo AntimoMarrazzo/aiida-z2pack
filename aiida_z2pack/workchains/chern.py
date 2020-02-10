@@ -9,7 +9,7 @@ from aiida.engine import WorkChain, ToContext, if_, while_, append_
 from aiida_quantumespresso.utils.mapping import prepare_process_inputs
 from aiida_quantumespresso.workflows.functions import create_kpoints_from_distance
 
-from .functions import crop_kpoints
+from .functions import crop_kpoints, copy_array_data
 
 # Z2packCalculation   = CalculationFactory('z2pack.z2pack')
 
@@ -441,6 +441,8 @@ class FindCrossingsWorkChain(WorkChain):
 
         res = orm.ArrayData()
         res.set_array('crossings', app)
+
+        res = copy_array_data(res)
 
         self.out('crossings', res)
 

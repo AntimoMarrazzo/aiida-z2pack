@@ -47,3 +47,12 @@ def crop_kpoints(structure, kpt_data, centers, radius):
     new.set_kpoints(kpt_cryst[where])
 
     return new
+
+@calcfunction
+def copy_array_data(array):
+    new = orm.ArrayData()
+
+    for label, data in array.get_iterarrays():
+        new.set_array(label, data)
+
+    return new
