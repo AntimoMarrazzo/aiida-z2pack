@@ -423,17 +423,17 @@ class FindCrossingsWorkChain(WorkChain):
             self.report('No points with small gap found in this iteraton.')
             self.ctx.failed_find += 1
             if self.ctx.failed_find > 1:
+                self.report('Failed to find a low_gap point after two consecutive iterations.')
                 if self.ctx.found_crossings:
                     self.ctx.do_loop = False
                     return
                 else:
-                    self.report('Failed to find a low_gap point after two consecutive iterations.'.format(new))
                     return self.exit_codes.ERROR_CANT_PINPOINT_LOWGAP_ZONE
 
     def results(self):
         calculation = self.ctx.workchain_nscf[self.ctx.iteration - 1]
         if self.ctx.iteration >= self.ctx.max_iteration and not self.ctx.found_crossings:
-            self.report('reached the maximum number of iterations {}: last ran PwBaseWorkChain<{}>'.format(
+            self.report('No crossing found. Reached the maximum number of iterations {}: last ran PwBaseWorkChain<{}>'.format(
                 self.ctx.max_iteration, self.ctx.calc_name, calculation.pk))
             return self.exit_codes.ERROR_MAXIMUM_ITERATIONS_EXCEEDED
 
