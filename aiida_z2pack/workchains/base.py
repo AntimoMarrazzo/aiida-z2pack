@@ -1,7 +1,7 @@
 from aiida import orm
 from aiida.common import AttributeDict
 from aiida.plugins import WorkflowFactory, CalculationFactory
-from aiida.engine import ToContext, while_
+from aiida.engine import ToContext, while_, if_
 
 # from aiida_quantumespresso.utils.mapping import prepare_process_inputs
 from aiida_quantumespresso.common.workchain.utils import register_error_handler, ErrorHandlerReport
@@ -41,6 +41,14 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
             default=orm.Bool(False),
             help='If `True`, work directories of all called calculation will be cleaned at the end of execution.'
             )
+        spec.input(
+            'parent_folder', valid_type=orm.RemoteData,
+            required=False,
+            help=(
+                'Output of a previous scf calculation to start a new z2pack calclulation from. '
+                'If specified, will not run the scf calculation and start straight from z2pack.'
+                )
+            )
 
         #Z2pack inputs ###########################################################
         spec.input(
@@ -63,8 +71,10 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
 
         spec.outline(
             cls.setup,
-            cls.run_scf,
-            cls.inspect_scf,
+            if_(cls.should_do_scf)(
+                cls.run_scf,
+                cls.inspect_scf,
+                ),
             cls.setup_z2pack,
             while_(cls.should_run_calculation)(
                 cls.prepare_calculation,
@@ -96,6 +106,17 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
         self.ctx.MND_threshold    = self.inputs.min_neighbour_distance_threshold_minimum.value
         self.ctx.MND_scale_factor = self.inputs.min_neighbour_distance_scale_factor.value
 
+    def should_do_scf(self):
+        if 'parent_folder' in self.inputs:
+            if 'scf' in self.inputs:
+                self.report('WARNING: both `scf` and `parent_folder` input ports specfied. `scf` will be ignored')
+
+            self.ctx.parent_folder = self.inputs.parent_folder
+
+            return False
+
+        return True
+
     def run_scf(self):
         inputs = AttributeDict(self.exposed_inputs(PwBaseWorkChain, namespace='scf'))
         inputs.pw.structure = self.inputs.structure
@@ -118,6 +139,8 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
             self.report('Starting scf PwBaseWorkChain failed with exit status {}'.format(workchain.exit_status))
             return self.exit_codes.ERROR_SUB_PROCESS_FAILED_STARTING_SCF
 
+        self.ctx.parent_folder = self.ctx.workchain_scf.outputs.remote_folder
+
     def should_run_calculation(self):
         """Return whether a new calculation should be run.
         Same behaviour as the BaseRestartWorkChain from the qe plugin. 
@@ -128,14 +151,15 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
 
     def setup_z2pack(self):
         inputs = AttributeDict(self.exposed_inputs(Z2packCalculation, 'z2pack'))
-        inputs.pw_code = self.inputs.scf.pw.code
-        inputs.parent_folder = self.ctx.workchain_scf.outputs.remote_folder
+        if 'workchain_scf' in self.ctx:
+            inputs.pw_code = self.inputs.scf.pw.code
+        inputs.parent_folder = self.ctx.parent_folder
         inputs.z2pack_settings = inputs.z2pack_settings.get_dict()
 
         if not 'wannier90_parameters' in inputs:
             inputs.wannier90_parameters = self._autoset_wannier90_paremters()
         else:
-            params = inputs.wannier90_parameters
+            params = inputs.wannier90_parameters.get_dict()
             if any(not var in params for var in ['num_wann', 'num_bands', 'exclude_bands']):
                 inputs.wannier90_parameters = self._autoset_wannier90_paremters()
 
