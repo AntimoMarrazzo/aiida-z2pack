@@ -167,6 +167,8 @@ class FindCrossingsWorkChain(WorkChain):
             message='The maximum number of iterations was exceeded.')
         spec.exit_code(162, 'ERROR_TOO_MANY_ARRAYS',
             message='An ArrayData node contains more arrays than expected.')
+        spec.exit_code(172, 'ERROR_MEMORY_TOO_MANY_KPOINTS',
+            message='The generation of the kpoints failed because the mesh size was too big.')
 
     def setup(self):
         """Define the current structure in the context to be the input structure."""
@@ -302,12 +304,16 @@ class FindCrossingsWorkChain(WorkChain):
                 orm.Float(self.ctx.current_crop_radius)
                 )
 
+
             self.ctx.current_kpoints = cropped
 
             nkpt = len(cropped.get_kpoints())
             self.report('Calculation with cropped mesh=`{}`, centers=`{}`, radius=`{}`'.format(
                 mesh, self.ctx.pinned_points, self.ctx.current_crop_radius
                 ))
+            if isinstance(cropped, orm.Bool):
+                self.report("MemoryError ... too many kpoints.")
+                return self.exit_codes.ERROR_MEMORY_TOO_MANY_KPOINTS
             self.report('Cropped `{}` k-points out of the original grid.'.format(nkpt))
         else:
             self.report('Calculation with non-cropped mesh=`{}`'.format(mesh))

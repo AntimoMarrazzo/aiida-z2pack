@@ -30,7 +30,10 @@ def crop_kpoints(structure, kpt_data, centers, radius):
     cell      = np.array(structure.cell)
     recipr    = recipr_base(cell)
 
-    kpt_cryst = np.array(kpt_data.get_kpoints_mesh(print_list=True))
+    try:
+        kpt_cryst = np.array(kpt_data.get_kpoints_mesh(print_list=True))
+    except MemoryError:
+        return orm.Bool(False)
     kpt_cart  = np.dot(kpt_cryst, recipr)
 
     c_cryst   = centers
