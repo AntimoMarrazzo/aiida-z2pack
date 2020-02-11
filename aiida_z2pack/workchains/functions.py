@@ -84,7 +84,7 @@ def generate_cubic_grid(structure, centers, distance, dim):
             attach = new
         else:
             old_tree = KDTree(res)
-            new_tree = KDTree(res)
+            new_tree = KDTree(new)
 
             query = new_tree.query_ball_tree(old_tree, r=distance)
 
@@ -100,26 +100,25 @@ def generate_cubic_grid(structure, centers, distance, dim):
     return kpt
 
 @calcfunction
-def get_crossing_and_lowgap_points(bands_data, vb_cb, curr_threshold, min_threshold):
+def get_crossing_and_lowgap_points(bands_data, vb_cb, gap_threshold):
     if not isinstance(bands_data, orm.BandsData):
         raise ValueError("Invalide type {} for parameter `bands_data`".format(type(bands_data)))
     if not isinstance(vb_cb, orm.ArrayData):
         raise ValueError("Invalide type {} for parameter `vb_cb`".format(type(vb_cb)))
-    if not isinstance(curr_threshold, orm.Float):
-        raise ValueError("Invalide type {} for parameter `curr_threshold`".format(type(curr_threshold)))
-    if not isinstance(min_threshold, orm.Float):
-        raise ValueError("Invalide type {} for parameter `min_threshold`".format(type(min_threshold)))
+    if not isinstance(gap_threshold, orm.Float):
+        raise ValueError("Invalide type {} for parameter `gap_threshold`".format(type(gap_threshold)))
     
     bands   = bands_data.get_bands()
     kpoints = bands_data.get_kpoints()
     vb, cb  = vb_cb.get_array('vb_cb')
-    current_gap_threshold = curr_threshold.value
-    min_gap_threshold     = min_threshold.value
+    gap_thr = gap_threshold.value
+    gaps    = bands[:,cb] - bands[:,vb]
 
-    gaps   = bands[:,cb] - bands[:,vb]
+    min_gap = gaps.min()
+    pinned_thr = min_gap * 1.15
 
-    where_pinned = np.where((min_gap_threshold < gaps) & (gaps <= current_gap_threshold))
-    where_found  = np.where(gaps <= min_gap_threshold)
+    where_pinned = np.where((gap_thr < gaps) & (gaps <= pinned_thr))
+    where_found  = np.where(gaps <= gap_thr)
 
     res = orm.ArrayData()
     res.set_array('pinned', kpoints[where_pinned])

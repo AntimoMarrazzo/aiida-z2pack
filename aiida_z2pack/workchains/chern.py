@@ -70,7 +70,7 @@ class FindCrossingsWorkChain(WorkChain):
 
         spec.input(
             'min_kpoints_distance', valid_type=orm.Float,
-            default=orm.Float(1E-4),
+            default=orm.Float(1E-5),
             help='Stop iterations when `kpoints_distance`  drop below this value.'
             )
         spec.input(
@@ -80,7 +80,7 @@ class FindCrossingsWorkChain(WorkChain):
             )
         spec.input(
             'scale_kpoints_distance', valid_type=orm.Float,
-            default=orm.Float(10.0),
+            default=orm.Float(8.0),
             help='Across iterations divide `kpoints_distance` by this scaling factor.'
             )
         spec.input(
@@ -89,24 +89,9 @@ class FindCrossingsWorkChain(WorkChain):
             help='Starting mesh of kpoints'
             )
         spec.input(
-            'starting_gap_threshold', valid_type=orm.Float,
+            'gap_threshold', valid_type=orm.Float,
             default=orm.Float(0.3),
-            help=(
-                'Starting value for `gap_threshold`. All kpoints with a gap between valence and conduction '
-                'lower than this threshold will be selected for the successive loops.'
-                )
-            )
-        spec.input(
-            'min_gap_threshold', valid_type=orm.Float,
-            default=orm.Float(0.001),
-            help=('Across iterations, `gap_threshold` will never drop below this value.'
-                )
-            )
-        spec.input(
-            'scale_gap_threshold', valid_type=orm.Float,
-            default=orm.Float(5.0),
-            help=('Between every iteration, divide `gap_threshold` by this scaling factor.'
-                )
+            help='kpoints ith gap < `gap_threshold` are considered possible crossings.'
             )
 
         # OUTLINE ############################################################################
@@ -242,9 +227,10 @@ class FindCrossingsWorkChain(WorkChain):
         self.ctx.min_kpoints_distance      = self.inputs.min_kpoints_distance.value
         self.ctx.scale_kpoints_distance    = self.inputs.scale_kpoints_distance.value
 
-        self.ctx.current_gap_threshold  = self.inputs.starting_gap_threshold.value
-        self.ctx.min_gap_threshold      = self.inputs.min_gap_threshold.value
-        self.ctx.scale_gap_threshold    = self.inputs.scale_gap_threshold.value
+        self.ctx.gap_threshold = self.inputs.gap_threshold.value
+        # self.ctx.current_gap_threshold  = self.inputs.starting_gap_threshold.value
+        # self.ctx.min_gap_threshold      = self.inputs.min_gap_threshold.value
+        # self.ctx.scale_gap_threshold    = self.inputs.scale_gap_threshold.value
 
         self.ctx.dim = get_kpoint_grid_dimensionality(self.inputs.starting_kpoints)
 
@@ -304,8 +290,8 @@ class FindCrossingsWorkChain(WorkChain):
         vb_cb.set_array('vb_cb', np.array([vb, cb]))
 
         res = get_crossing_and_lowgap_points(
-            bands, vb_cb,
-            orm.Float(self.ctx.current_gap_threshold), orm.Float(self.ctx.min_gap_threshold)
+            bands, vb_cb, orm.Float(self.ctx.gap_threshold)
+            # orm.Float(self.ctx.current_gap_threshold), orm.Float(self.ctx.min_gap_threshold)
             )
 
         self.ctx.found_crossings.append(res)
@@ -315,21 +301,23 @@ class FindCrossingsWorkChain(WorkChain):
 
         self.ctx.current_kpoints_distance /= self.ctx.scale_kpoints_distance
 
-        cgt = self.ctx.current_gap_threshold
-        mgt = self.ctx.min_gap_threshold
-        sgt = self.ctx.scale_gap_threshold
+        # cgt = self.ctx.current_gap_threshold
+        # mgt = self.ctx.min_gap_threshold
+        # sgt = self.ctx.scale_gap_threshold
 
-        self.ctx.current_gap_threshold = max(cgt/sgt, mgt)
+        # self.ctx.current_gap_threshold = max(cgt/sgt, mgt)
 
         last = self.ctx.found_crossings[-1]
         pinned = last.get_array('pinned')
         found = last.get_array('found')
 
-        n_saved = len(pinned) + len(found)
-        if n_saved:
-            self.report('`{}` points found with gap lower than the threshold `{}`'.format(n_saved, cgt))
+        n_pinned = len(pinned)
+        n_found  = len(found)
+        if n_pinned or n_found:
+            self.report('`{}` low-gap points found.'.format(n_pinned))
+            self.report('`{}` crossing points found.'.format(n_found))
 
-            self.report('Gap threshold reduced to `{}`'.format(self.ctx.current_gap_threshold))
+            # self.report('Gap threshold reduced to `{}`'.format(self.ctx.current_gap_threshold))
             self.report('Kpoints distance reduced to `{}`'.format(self.ctx.current_kpoints_distance))
         else:
             self.report('No points with small gap found. iteration <{}>'.format(self.ctx.iteration))
