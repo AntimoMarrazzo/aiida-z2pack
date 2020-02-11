@@ -205,9 +205,9 @@ class FindCrossingsWorkChain(WorkChain):
         """Run the PwBaseWorkChain in scf mode on the primitive cell of (optionally relaxed) input structure."""
         inputs = AttributeDict(self.exposed_inputs(PwBaseWorkChain, namespace='scf'))
         inputs.clean_workdir = self.inputs.clean_workdir
-        inputs.pw.structure = self.ctx.current_structure
-        inputs.pw.pseudos = self.inputs.pseudos
-        inputs.pw.code = self.inputs.code
+        inputs.pw.pseudos    = self.inputs.pseudos
+        inputs.pw.code       = self.inputs.code
+        inputs.pw.structure  = self.ctx.current_structure
         inputs.pw.parameters = inputs.pw.parameters.get_dict()
         inputs.pw.parameters.setdefault('CONTROL', {})
         inputs.pw.parameters['CONTROL']['calculation'] = 'scf'
@@ -413,30 +413,18 @@ class FindCrossingsWorkChain(WorkChain):
         mcr = self.ctx.min_crop_radius
         scr = self.ctx.scale_crop_radius
 
-
-        new = max(cgt/sgt, mgt)
-        self.ctx.current_gap_threshold = new
-        self.report('Gap threshold reduced to `{}`'.format(new))
-
-        new = max(ccr/scr, mcr)
-        self.ctx.current_crop_radius = new
-        self.report('Crop radius threshold reduced to `{}`'.format(new))
+        self.ctx.current_gap_threshold = max(cgt/sgt, mgt)
+        self.ctx.current_crop_radius   = max(ccr/scr, mcr)
 
         if self.ctx.found_some:
-            # self.ctx.failed_find = 0
             n_found = len(self.ctx.pinned_points) + len(self.ctx.found_crossings)
             self.report('`{}` points found with gap lower than the threshold `{}`'.format(n_found, cgt))
+
+            self.report('Gap threshold reduced to `{}`'.format(self.ctx.current_gap_threshold))
+            self.report('Crop radius reduced to `{}`'.format(self.ctx.current_crop_radius))
         else:
             self.report('No points with small gap found. iteration <{}>'.format(self.ctx.iteration))
             self.ctx.do_loop = False
-            # self.ctx.failed_find += 1
-            # if self.ctx.failed_find > 1:
-            #     self.report('Failed to find a low_gap point after two consecutive iterations.')
-            #     if self.ctx.found_crossings:
-            #         self.ctx.do_loop = False
-            #         return
-            #     else:
-            #         return self.exit_codes.ERROR_CANT_PINPOINT_LOWGAP_ZONE
 
     def results(self):
         calculation = self.ctx.workchain_nscf[self.ctx.iteration - 1]
