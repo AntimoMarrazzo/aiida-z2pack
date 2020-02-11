@@ -90,7 +90,8 @@ def generate_cubic_grid(structure, centers, distance, dim):
 
             attach = np.array([new[n] for n,q in enumerate(query) if not q])
 
-        res = np.vstack((res, attach))
+        if len(attach):
+            res = np.vstack((res, attach))
 
     kpt = orm.KpointsData()
     kpt.set_cell_from_structure(structure)
