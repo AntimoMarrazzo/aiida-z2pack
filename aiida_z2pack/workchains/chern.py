@@ -90,7 +90,7 @@ class FindCrossingsWorkChain(WorkChain):
             )
         spec.input(
             'gap_threshold', valid_type=orm.Float,
-            default=orm.Float(0.3),
+            default=orm.Float(0.001),
             help='kpoints ith gap < `gap_threshold` are considered possible crossings.'
             )
 
@@ -301,26 +301,18 @@ class FindCrossingsWorkChain(WorkChain):
 
         self.ctx.current_kpoints_distance /= self.ctx.scale_kpoints_distance
 
-        # cgt = self.ctx.current_gap_threshold
-        # mgt = self.ctx.min_gap_threshold
-        # sgt = self.ctx.scale_gap_threshold
-
-        # self.ctx.current_gap_threshold = max(cgt/sgt, mgt)
-
         last = self.ctx.found_crossings[-1]
         pinned = last.get_array('pinned')
         found = last.get_array('found')
 
         n_pinned = len(pinned)
         n_found  = len(found)
-        if n_pinned or n_found:
-            self.report('`{}` low-gap points found.'.format(n_pinned))
-            self.report('`{}` crossing points found.'.format(n_found))
-
-            # self.report('Gap threshold reduced to `{}`'.format(self.ctx.current_gap_threshold))
+        self.report('`{}` low-gap points found.'.format(n_pinned))
+        self.report('`{}` crossing points found.'.format(n_found))
+        if n_pinned:
             self.report('Kpoints distance reduced to `{}`'.format(self.ctx.current_kpoints_distance))
         else:
-            self.report('No points with small gap found. iteration <{}>'.format(self.ctx.iteration))
+            self.report('No low-gap points found to continue loop. iteration <{}>'.format(self.ctx.iteration))
             self.ctx.do_loop = False
 
     def results(self):
