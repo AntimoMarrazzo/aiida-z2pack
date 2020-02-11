@@ -293,7 +293,7 @@ class FindCrossingsWorkChain(WorkChain):
 
         if self.ctx.iteration > 0 and len(self.ctx.pinned_points):
             centers = orm.ArrayData()
-            centers.set_array('centers', self.ctx.pinned_points)
+            centers.set_array('centers', np.array(self.ctx.pinned_points))
 
             cropped  = crop_kpoints(
                 self.ctx.current_structure,
@@ -306,7 +306,7 @@ class FindCrossingsWorkChain(WorkChain):
 
             nkpt = len(cropped.get_kpoints())
             self.report('Calculation with cropped mesh=`{}`, centers=`{}`, radius=`{}`'.format(
-                mesh, app, self.ctx.current_crop_radius
+                mesh, self.ctx.pinned_points, self.ctx.current_crop_radius
                 ))
             self.report('Cropped `{}` k-points out of the original grid.'.format(nkpt))
         else:
@@ -432,9 +432,9 @@ class FindCrossingsWorkChain(WorkChain):
 
     def results(self):
         calculation = self.ctx.workchain_nscf[self.ctx.iteration - 1]
-        if self.ctx.iteration >= self.ctx.max_iteration and not self.ctx.found_crossings:
+        if self.ctx.iteration >= self.ctx.max_iteration and not len(self.ctx.found_crossings):
             self.report('No crossing found. Reached the maximum number of iterations {}: last ran PwBaseWorkChain<{}>'.format(
-                self.ctx.max_iteration, self.ctx.calc_name, calculation.pk))
+                self.ctx.max_iteration, calculation.pk))
             return self.exit_codes.ERROR_MAXIMUM_ITERATIONS_EXCEEDED
 
         app = np.unique(np.array(self.ctx.found_crossings), axis=0)
