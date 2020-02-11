@@ -80,7 +80,7 @@ class FindCrossingsWorkChain(WorkChain):
             )
         spec.input(
             'scale_kpoints_distance', valid_type=orm.Float,
-            default=orm.Float(0.05),
+            default=orm.Float(10.0),
             help='Across iterations divide `kpoints_distance` by this scaling factor.'
             )
         spec.input(
@@ -264,7 +264,7 @@ class FindCrossingsWorkChain(WorkChain):
         else:
             distance = orm.Float(self.ctx.current_kpoints_distance)
             self.ctx.current_kpoints = generate_cubic_grid(
-                self.ctx.structure, self.ctx.found_crossings[-1], distance, self.ctx.dim
+                self.ctx.current_structure, self.ctx.found_crossings[-1], distance, self.ctx.dim
                 )
 
     def run_nscf(self):
