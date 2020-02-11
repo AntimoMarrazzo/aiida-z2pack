@@ -82,13 +82,13 @@ class FindCrossingsWorkChain(WorkChain):
             )
         spec.input(
             'mesh_scale_factor', valid_type=(orm.Int, orm.ArrayData),
-            default=orm.Int(3),
+            default=orm.Int(10),
             help='If `True`, work directories of all called calculation will be cleaned at the end of execution.'
             )
 
         spec.input(
             'starting_gap_threshold', valid_type=orm.Float,
-            default=orm.Float(0.03),
+            default=orm.Float(0.3),
             help=(
                 'Starting value for `gap_threshold`. All kpoints with a gap between valence and conduction '
                 'lower than this threshold will be selected for the successive loops.'
@@ -102,7 +102,7 @@ class FindCrossingsWorkChain(WorkChain):
             )
         spec.input(
             'scale_gap_threshold', valid_type=orm.Float,
-            default=orm.Float(3.0),
+            default=orm.Float(5.0),
             help=('Between every iteration, divide `gap_threshold` by this scaling factor.'
                 )
             )
@@ -111,20 +111,20 @@ class FindCrossingsWorkChain(WorkChain):
             'starting_crop_radius', valid_type=orm.Float,
             default=orm.Float(0.5),
             help=(
-                'Starting value for `gap_threshold`. All kpoints with a gap between valence and conduction '
-                'lower than this threshold will be selected for the successive loops.'
+                'Starting value for `crop_radius` in units of 1/A. Iterations after the first one will generate '
+                'denser grids and crop them around the previously found points using a spherical cut.'
                 )
             )
         spec.input(
             'min_crop_radius', valid_type=orm.Float,
             default=orm.Float(0.01),
-            help=('Across iterations, `gap_threshold` will never drop below this value.'
+            help=('Across iterations, `crop_radius` will never drop below this value.'
                 )
             )
         spec.input(
             'scale_crop_radius', valid_type=orm.Float,
             default=orm.Float(5.0),
-            help=('Between every iteration, divide `gap_threshold` by this scaling factor.'
+            help=('Between every iteration, divide `crop_radius` by this scaling factor.'
                 )
             )
 
@@ -371,73 +371,85 @@ class FindCrossingsWorkChain(WorkChain):
         `pinned_points` otherwise"""
         pinned = np.array(self.ctx.pinned_points)
         gaps   = np.array(self.ctx.pinned_gaps)
-        if self.ctx.found_crossings:
-            found = KDTree(self.ctx.found_crossings)
-            curr  = KDTree(self.ctx.pinned_points)
+        fpt    = self.ctx.found_crossings
 
-            query = curr.query_ball_tree(found, r=self.ctx.min_crop_radius/5.)
-            where = [n for n,l in enumerate(query) if not l]
+        if len(fpt):
+            found_kpt = [e[0] for e in  fpt]
+            found     = KDTree(found_kpt)
 
-            pinned = pinned[where]
-            gaps   = gaps[where]
+            new_p = []
+            new_g = []
+            for gap, kpt in zip(gaps, pinned):
+                query = found.query_ball_point(kpt, r=self.ctx.min_crop_radius/2.)
+
+                if not len(query):
+                    new_p.append(kpt)
+                    new_g.append(gap)
+                for i in query:
+                    if gap < fpt[i][1]:
+                        fpt[i] = (kpt, gap)
+
+            pinned = np.array(new_p)
+            gaps   = np.array(new_g)
 
 
         self.ctx.found_some = bool(len(pinned))
 
-        res = []
-        for kpt, gap in zip(pinned, gaps):
-            if gap < self.ctx.min_gap_threshold:
-                self.ctx.found_crossings.append(kpt)
-            else:
-                res.append(kpt)
+        w  = np.where(gaps <  self.ctx.min_gap_threshold)
+        nw = np.where(gaps >= self.ctx.min_gap_threshold)
 
-        self.ctx.pinned_points = res
-
+        self.ctx.found_crossings.extend(list(zip(pinned[w], gaps[w])))
+        self.ctx.pinned_points = pinned[nw]
 
     def stepper(self):
         """Perform the loop step operation of modifying the thresholds"""
         self.ctx.current_mesh = self.ctx.current_mesh * self.ctx.scale_mesh
 
-        n_found = len(self.ctx.pinned_points) + len(self.ctx.found_crossings)
+        cgt = self.ctx.current_gap_threshold
+        mgt = self.ctx.min_gap_threshold
+        sgt = self.ctx.scale_gap_threshold
+
+        ccr = self.ctx.current_crop_radius
+        mcr = self.ctx.min_crop_radius
+        scr = self.ctx.scale_crop_radius
+
+
+        new = max(cgt/sgt, mgt)
+        self.ctx.current_gap_threshold = new
+        self.report('Gap threshold reduced to `{}`'.format(new))
+
+        new = max(ccr/scr, mcr)
+        self.ctx.current_crop_radius = new
+        self.report('Crop radius threshold reduced to `{}`'.format(new))
+
         if self.ctx.found_some:
-            self.ctx.failed_find = 0
-
-            cgt = self.ctx.current_gap_threshold
-            mgt = self.ctx.min_gap_threshold
-            sgt = self.ctx.scale_gap_threshold
-
-            ccr = self.ctx.current_crop_radius
-            mcr = self.ctx.min_crop_radius
-            scr = self.ctx.scale_crop_radius
-
+            # self.ctx.failed_find = 0
+            n_found = len(self.ctx.pinned_points) + len(self.ctx.found_crossings)
             self.report('`{}` points found with gap lower than the threshold `{}`'.format(n_found, cgt))
-
-            new = max(cgt/sgt, mgt)
-            self.ctx.current_gap_threshold = new
-            self.report('Gap threshold reduced to `{}`'.format(new))
-
-            new = max(ccr/scr, mcr)
-            self.ctx.current_crop_radius = new
-            
         else:
-            self.report('No points with small gap found in this iteraton.')
-            self.ctx.failed_find += 1
-            if self.ctx.failed_find > 1:
-                self.report('Failed to find a low_gap point after two consecutive iterations.')
-                if self.ctx.found_crossings:
-                    self.ctx.do_loop = False
-                    return
-                else:
-                    return self.exit_codes.ERROR_CANT_PINPOINT_LOWGAP_ZONE
+            self.report('No points with small gap found. iteration <{}>'.format(self.ctx.iteration))
+            self.ctx.do_loop = False
+            # self.ctx.failed_find += 1
+            # if self.ctx.failed_find > 1:
+            #     self.report('Failed to find a low_gap point after two consecutive iterations.')
+            #     if self.ctx.found_crossings:
+            #         self.ctx.do_loop = False
+            #         return
+            #     else:
+            #         return self.exit_codes.ERROR_CANT_PINPOINT_LOWGAP_ZONE
 
     def results(self):
         calculation = self.ctx.workchain_nscf[self.ctx.iteration - 1]
-        if self.ctx.iteration >= self.ctx.max_iteration and not len(self.ctx.found_crossings):
+        n_found     = len(self.ctx.found_crossings)
+        if self.ctx.iteration >= self.ctx.max_iteration and not n_found:
             self.report('No crossing found. Reached the maximum number of iterations {}: last ran PwBaseWorkChain<{}>'.format(
                 self.ctx.max_iteration, calculation.pk))
             return self.exit_codes.ERROR_MAXIMUM_ITERATIONS_EXCEEDED
+        if not self.ctx.do_loop and not n_found:
+            return self.exit_codes.ERROR_CANT_PINPOINT_LOWGAP_ZONE
 
-        app = np.unique(np.array(self.ctx.found_crossings), axis=0)
+        app = [e[0] for e in  self.ctx.found_crossings]
+        app = np.unique(np.array(app), axis=0)
 
         res = orm.ArrayData()
         res.set_array('crossings', app)
