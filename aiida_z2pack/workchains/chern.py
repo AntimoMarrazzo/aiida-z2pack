@@ -263,7 +263,9 @@ class FindCrossingsWorkChain(WorkChain):
             self.ctx.current_kpoints = self.inputs.starting_kpoints
         else:
             distance = orm.Float(self.ctx.current_kpoints_distance)
-            self.ctx.current_kpoints = generate_cubic_grid(self.ctx.found_crossings[-1], distance, self.ctx.dim)
+            self.ctx.current_kpoints = generate_cubic_grid(
+                self.ctx.structure, self.ctx.found_crossings[-1], distance, self.ctx.dim
+                )
 
     def run_nscf(self):
         self.ctx.iteration += 1
@@ -293,8 +295,7 @@ class FindCrossingsWorkChain(WorkChain):
         """Extract kpoints with gap lower than the gap threshold"""
         self.report('Analyzing nscf results for BandsData')
         workchain = self.ctx.workchain_nscf[self.ctx.iteration - 1]
-        node      = workchain.outputs.output_band
-        bands     = node.get_bands()
+        bands      = workchain.outputs.output_band
 
         vb        = self.ctx.vb
         cb        = self.ctx.cb
@@ -322,7 +323,7 @@ class FindCrossingsWorkChain(WorkChain):
 
         last = self.ctx.found_crossings[-1]
         pinned = last.get_array('pinned')
-        found = last.get_array('fount')
+        found = last.get_array('found')
 
         n_saved = len(pinned) + len(found)
         if n_saved:
@@ -337,11 +338,14 @@ class FindCrossingsWorkChain(WorkChain):
     def results(self):
         calculation = self.ctx.workchain_nscf[self.ctx.iteration - 1]
 
-        found = merge_crossing_results(*self.ctx.found_crossings)
+        found = merge_crossing_results(
+            **{'found_{}'.format(n):array for n,array in enumerate(self.ctx.found_crossings)}
+            )
+
         n_found = len(found.get_array('crossings'))
         if self.ctx.current_kpoints_distance >= self.ctx.min_kpoints_distance and not n_found:
-            self.report('No crossing found. Reached the maximum number of iterations {}: last ran PwBaseWorkChain<{}>'.format(
-                self.ctx.max_iteration, calculation.pk))
+            self.report('No crossing found. Reached the minimum kpoints distance {}: last ran PwBaseWorkChain<{}>'.format(
+                self.ctx.min_kpoints_distance, calculation.pk))
             return self.exit_codes.ERROR_MAXIMUM_ITERATIONS_EXCEEDED
         if not self.ctx.do_loop and not n_found:
             return self.exit_codes.ERROR_CANT_PINPOINT_LOWGAP_ZONE

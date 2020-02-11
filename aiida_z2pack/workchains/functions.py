@@ -54,17 +54,22 @@ def crop_kpoints(structure, kpt_data, centers, radius):
     return new
 
 @calcfunction
-def generate_cubic_grid(centers, distance, dim=orm.Int(3)):
-    """Generate cubic grids centered in `centers` spanning 8 point per dimension.
-    """
+def generate_cubic_grid(structure, centers, distance, dim):
+    """Generate cubic grids centered in `centers` spanning 8 point per dimension."""
+    if not isinstance(structure, orm.StructureData):
+        raise ValueError("Invalide type {} for parameter `structure`".format(type(structure)))
     if not isinstance(centers, orm.ArrayData):
         raise ValueError("Invalide type {} for parameter `centers`".format(type(centers)))
     if not isinstance(distance, orm.Float):
         raise ValueError("Invalide type {} for parameter `distance`".format(type(distance)))
 
+    cell     = structure.cell
     centers  = centers.get_array('pinned')
     distance = distance.value
     dim      = dim.value
+    recipr   = recipr_base(cell)
+
+    centers  = np.dot(centers, recipr)
 
     l    = np.arange(-4,4) + 0.5
     lx   = l
@@ -88,7 +93,8 @@ def generate_cubic_grid(centers, distance, dim=orm.Int(3)):
         res = np.vstack((res, attach))
 
     kpt = orm.KpointsData()
-    kpt.set_kpoints(res)
+    kpt.set_cell_from_structure(structure)
+    kpt.set_kpoints(res, cartesian=True)
 
     return kpt
 
@@ -132,25 +138,18 @@ def get_kpoint_grid_dimensionality(kpt_data):
     return orm.Int(dim)
 
 
-@calcfunction()
-def merge_crossing_results(*args):
+@calcfunction
+def merge_crossing_results(**kwargs):
     merge = np.empty((0,3))
-    for array in args:
+    for array in kwargs.values():
         found = array.get_array('found')
-        merge = np.vstack((merge,found))
+        merge = np.vstack((merge, found))
 
-    merge = np.unique(merge, axis=0)
+    if len(merge):
+        merge = np.unique(merge, axis=0)
 
     res = orm.ArrayData()
     res.set_array('crossings', merge)
     
     return res
 
-@calcfunction
-def copy_array_data(array):
-    new = orm.ArrayData()
-
-    for label, data in array.get_iterarrays():
-        new.set_array(label, data)
-
-    return new
