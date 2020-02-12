@@ -124,7 +124,7 @@ def get_crossing_and_lowgap_points(bands_data, vb_cb, gap_threshold, wide_scope)
     else:
         where_found = np.where(gaps <= gap_thr)
         if not len(where_found[0]):
-            where_pinned = gaps.argmin()
+            where_pinned = [gaps.argmin(),]
         else:
             where_pinned = []
 
