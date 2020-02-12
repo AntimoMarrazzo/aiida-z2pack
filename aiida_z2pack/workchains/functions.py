@@ -71,7 +71,7 @@ def generate_cubic_grid(structure, centers, distance, dim):
 
     centers  = np.dot(centers, recipr)
 
-    l    = np.arange(-4,4) + 0.5
+    l    = np.arange(-3,4)
     lx   = l
     ly   = l if dim > 1 else [0,]
     lz   = l if dim > 2 else [0,]
