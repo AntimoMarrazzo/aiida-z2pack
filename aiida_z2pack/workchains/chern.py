@@ -129,8 +129,8 @@ class FindCrossingsWorkChain(WorkChain):
             message='the nscf PwBaseWorkChain sub process failed')
         spec.exit_code(142, 'ERROR_CANT_PINPOINT_LOWGAP_ZONE',
             message='After two iterations, no points with low_gap found. Aborting calculation!')
-        spec.exit_code(152, 'ERROR_MAXIMUM_ITERATIONS_EXCEEDED',
-            message='The maximum number of iterations was exceeded.')
+        spec.exit_code(152, 'ERROR_MINIMUM_DISTANCE_RAECHED',
+            message='The minimum distance was reached without finding any crossings.')
         spec.exit_code(162, 'ERROR_TOO_MANY_ARRAYS',
             message='An ArrayData node contains more arrays than expected.')
         spec.exit_code(172, 'ERROR_MEMORY_TOO_MANY_KPOINTS',
@@ -228,20 +228,25 @@ class FindCrossingsWorkChain(WorkChain):
         self.ctx.scale_kpoints_distance    = self.inputs.scale_kpoints_distance.value
 
         self.ctx.gap_threshold = self.inputs.gap_threshold.value
-        # self.ctx.current_gap_threshold  = self.inputs.starting_gap_threshold.value
-        # self.ctx.min_gap_threshold      = self.inputs.min_gap_threshold.value
-        # self.ctx.scale_gap_threshold    = self.inputs.scale_gap_threshold.value
 
         self.ctx.dim = get_kpoint_grid_dimensionality(self.inputs.starting_kpoints)
 
         self.ctx.found_crossings = []
-        self.ctx.do_loop = True
+        self.ctx.do_loop1 = True
+        self.ctx.do_loop2 = True
 
         self.report('Starting loop to find bands crossings.')
 
     def should_find_zero_gap(self):
         """Limit iterations over kpoints meshes."""
-        return  self.ctx.do_loop and self.ctx.current_kpoints_distance >= self.ctx.min_kpoints_distance
+        if not self.ctx.do_loop1 or not self.ctx.do_loop2:
+            return False
+
+        if self.ctx.current_kpoints_distance < self.ctx.min_kpoints_distance:
+            self.ctx.current_kpoints_distance = self.ctx.min_kpoints_distance
+            self.ctx.do_loop2 = False
+
+        return True
 
     def setup_grid(self):
         # mesh = self.ctx.current_mesh
@@ -279,7 +284,6 @@ class FindCrossingsWorkChain(WorkChain):
 
     def analyze_bands(self):
         """Extract kpoints with gap lower than the gap threshold"""
-        self.report('Analyzing nscf results for BandsData')
         workchain = self.ctx.workchain_nscf[self.ctx.iteration - 1]
         bands      = workchain.outputs.output_band
 
@@ -289,9 +293,10 @@ class FindCrossingsWorkChain(WorkChain):
         vb_cb = orm.ArrayData()
         vb_cb.set_array('vb_cb', np.array([vb, cb]))
 
+        self.report('Analyzing nscf results for BandsData<{}>'.format(bands.pk))
         res = get_crossing_and_lowgap_points(
-            bands, vb_cb, orm.Float(self.ctx.gap_threshold)
-            # orm.Float(self.ctx.current_gap_threshold), orm.Float(self.ctx.min_gap_threshold)
+            bands, vb_cb, orm.Float(self.ctx.gap_threshold),
+            orm.Bool(not bool(len(self.ctx.found_crossings)))
             )
 
         self.ctx.found_crossings.append(res)
@@ -313,7 +318,7 @@ class FindCrossingsWorkChain(WorkChain):
             self.report('Kpoints distance reduced to `{}`'.format(self.ctx.current_kpoints_distance))
         else:
             self.report('No low-gap points found to continue loop. iteration <{}>'.format(self.ctx.iteration))
-            self.ctx.do_loop = False
+            self.ctx.do_loop1 = False
 
     def results(self):
         calculation = self.ctx.workchain_nscf[self.ctx.iteration - 1]
@@ -323,16 +328,14 @@ class FindCrossingsWorkChain(WorkChain):
             )
 
         n_found = len(found.get_array('crossings'))
-        if self.ctx.current_kpoints_distance >= self.ctx.min_kpoints_distance and not n_found:
+        if not self.ctx.do_loop2 and not n_found:
             self.report('No crossing found. Reached the minimum kpoints distance {}: last ran PwBaseWorkChain<{}>'.format(
                 self.ctx.min_kpoints_distance, calculation.pk))
-            return self.exit_codes.ERROR_MAXIMUM_ITERATIONS_EXCEEDED
-        if not self.ctx.do_loop and not n_found:
+            return self.exit_codes.ERROR_MINIMUM_DISTANCE_RAECHED
+        if not self.ctx.do_loop1 and not n_found:
             return self.exit_codes.ERROR_CANT_PINPOINT_LOWGAP_ZONE
 
-
         self.out('crossings', found)
-
 
 
 class Z2pack3DChernWorkChain(WorkChain):

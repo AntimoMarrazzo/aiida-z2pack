@@ -100,7 +100,7 @@ def generate_cubic_grid(structure, centers, distance, dim):
     return kpt
 
 @calcfunction
-def get_crossing_and_lowgap_points(bands_data, vb_cb, gap_threshold):
+def get_crossing_and_lowgap_points(bands_data, vb_cb, gap_threshold, wide_scope):
     if not isinstance(bands_data, orm.BandsData):
         raise ValueError("Invalide type {} for parameter `bands_data`".format(type(bands_data)))
     if not isinstance(vb_cb, orm.ArrayData):
@@ -113,12 +113,20 @@ def get_crossing_and_lowgap_points(bands_data, vb_cb, gap_threshold):
     vb, cb  = vb_cb.get_array('vb_cb')
     gap_thr = gap_threshold.value
     gaps    = bands[:,cb] - bands[:,vb]
+    scope   = wide_scope.value
 
-    min_gap = gaps.min()
-    pinned_thr = min_gap * 1.15
+    if scope:
+        min_gap = gaps.min()
+        pinned_thr = min_gap * 1.15
 
-    where_pinned = np.where((gap_thr < gaps) & (gaps <= pinned_thr))
-    where_found  = np.where(gaps <= gap_thr)
+        where_pinned = np.where((gap_thr < gaps) & (gaps <= pinned_thr))
+        where_found  = np.where(gaps <= gap_thr)
+    else:
+        where_found = np.where(gaps <= gap_thr)
+        if not len(where_found[0]):
+            where_pinned = gaps.argmin()
+        else:
+            where_pinned = []
 
     res = orm.ArrayData()
     res.set_array('pinned', kpoints[where_pinned])
