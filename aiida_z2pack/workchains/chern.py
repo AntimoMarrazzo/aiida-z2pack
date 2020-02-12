@@ -80,7 +80,7 @@ class FindCrossingsWorkChain(WorkChain):
             )
         spec.input(
             'scale_kpoints_distance', valid_type=orm.Float,
-            default=orm.Float(8.0),
+            default=orm.Float(5.0),
             help='Across iterations divide `kpoints_distance` by this scaling factor.'
             )
         spec.input(
@@ -239,14 +239,8 @@ class FindCrossingsWorkChain(WorkChain):
 
     def should_find_zero_gap(self):
         """Limit iterations over kpoints meshes."""
-        if not self.ctx.do_loop1 or not self.ctx.do_loop2:
-            return False
 
-        if self.ctx.current_kpoints_distance < self.ctx.min_kpoints_distance:
-            self.ctx.current_kpoints_distance = self.ctx.min_kpoints_distance
-            self.ctx.do_loop2 = False
-
-        return True
+        return  self.ctx.do_loop1 and self.ctx.do_loop2
 
     def setup_grid(self):
         # mesh = self.ctx.current_mesh
@@ -304,7 +298,14 @@ class FindCrossingsWorkChain(WorkChain):
     def stepper(self):
         """Perform the loop step operation of modifying the thresholds"""
 
+        if not self.ctx.do_loop2:
+            self.ctx.do_loop1 = False
+            return
+
         self.ctx.current_kpoints_distance /= self.ctx.scale_kpoints_distance
+        if self.ctx.current_kpoints_distance <= self.ctx.min_kpoints_distance:
+            self.ctx.current_kpoints_distance = self.ctx.min_kpoints_distance
+            self.ctx.do_loop2 = False
 
         last = self.ctx.found_crossings[-1]
         pinned = last.get_array('pinned')

@@ -55,7 +55,7 @@ def crop_kpoints(structure, kpt_data, centers, radius):
 
 @calcfunction
 def generate_cubic_grid(structure, centers, distance, dim):
-    """Generate cubic grids centered in `centers` spanning 8 point per dimension."""
+    """Generate cubic grids centered in `centers` spanning 7 point per dimension."""
     if not isinstance(structure, orm.StructureData):
         raise ValueError("Invalide type {} for parameter `structure`".format(type(structure)))
     if not isinstance(centers, orm.ArrayData):
@@ -117,7 +117,7 @@ def get_crossing_and_lowgap_points(bands_data, vb_cb, gap_threshold, wide_scope)
 
     if scope:
         min_gap = gaps.min()
-        pinned_thr = min_gap * 1.15
+        pinned_thr = min(min_gap * 2.0, 0.1)
 
         where_pinned = np.where((gap_thr < gaps) & (gaps <= pinned_thr))
         where_found  = np.where(gaps <= gap_thr)
