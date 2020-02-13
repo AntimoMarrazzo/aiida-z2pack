@@ -1,6 +1,7 @@
 import numpy as np
 
 from aiida import orm
+from aiida.orm.utils import load_node
 from aiida.common import AttributeDict
 from aiida.plugins import WorkflowFactory, DataFactory
 from aiida.engine import WorkChain, ToContext, if_, while_, append_
@@ -184,11 +185,12 @@ class FindCrossingsWorkChain(WorkChain):
         inputs.pw.parameters['CONTROL']['calculation'] = 'scf'
 
         inputs = prepare_process_inputs(PwBaseWorkChain, inputs)
-        running = self.submit(PwBaseWorkChain, **inputs)
+        # running = self.submit(PwBaseWorkChain, **inputs)
 
-        self.report('launching PwBaseWorkChain<{}> in {} mode'.format(running.pk, 'scf'))
+        # self.report('launching PwBaseWorkChain<{}> in {} mode'.format(running.pk, 'scf'))
 
-        return ToContext(workchain_scf=running)
+        # return ToContext(workchain_scf=running)
+        self.ctx.workchain_scf = load_node(9526)
 
     def inspect_scf(self):
         """Verify that the PwBaseWorkChain for the scf run finished successfully."""
