@@ -217,7 +217,7 @@ class FindCrossingsWorkChain(WorkChain):
             self.ctx.inputs.pw.parameters = self.ctx.inputs.pw.parameters.get_dict()
             self.ctx.inputs.pw.parameters.setdefault('CONTROL', {})
             self.ctx.inputs.pw.parameters['CONTROL']['calculation'] = 'nscf'
-            
+
         self.ctx.inputs.pw.parent_folder = self.ctx.scf_folder
         self.ctx.inputs.clean_workdir = self.inputs.clean_workdir
         self.ctx.inputs.pw.structure  = self.ctx.current_structure
@@ -248,13 +248,14 @@ class FindCrossingsWorkChain(WorkChain):
         inputs.kpoints = self.inputs.starting_kpoints
 
         inputs = prepare_process_inputs(PwBaseWorkChain, inputs)
-        running = self.submit(PwBaseWorkChain, **inputs)
+        # running = self.submit(PwBaseWorkChain, **inputs)
 
-        self.report('launching PwBaseWorkChain<{}> in {} mode, iteration {}'.format(
-            running.pk, 'nscf', self.ctx.iteration
-            ))
+        # self.report('launching PwBaseWorkChain<{}> in {} mode, iteration {}'.format(
+        #     running.pk, 'nscf', self.ctx.iteration
+        #     ))
 
-        return ToContext(workchain_nscf=append_(running))
+        # return ToContext(workchain_nscf=append_(running))
+        self.ctx.workchain_nscf=[load_node(9641)]
 
     def should_find_zero_gap(self):
         """Limit iterations over kpoints meshes."""
