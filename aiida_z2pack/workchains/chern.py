@@ -7,7 +7,10 @@ from aiida.engine import WorkChain, ToContext, if_, while_, append_
 
 from aiida_quantumespresso.utils.mapping import prepare_process_inputs
 
-from .functions import generate_cubic_grid, get_kpoint_grid_dimensionality, get_crossing_and_lowgap_points, merge_crossing_results
+from .functions import (
+    generate_cubic_grid, get_kpoint_grid_dimensionality,
+    get_crossing_and_lowgap_points, merge_crossing_results, get_el_info
+    )
 
 # Z2packCalculation   = CalculationFactory('z2pack.z2pack')
 
@@ -216,12 +219,7 @@ class FindCrossingsWorkChain(WorkChain):
 
         workchain = self.ctx.workchain_scf
         pw_params = workchain.outputs.output_parameters.get_dict()
-        n_el      = pw_params['number_of_electrons']
-        spin      = pw_params['spin_orbit_calculation']
-
-        self.ctx.n_el = n_el
-        self.ctx.cb   = int(n_el) // (int(not spin) + 1)
-        self.ctx.vb   = self.ctx.cb - 1
+        self.ctx.el_info = get_el_info(pw_params)
 
         self.ctx.current_kpoints_distance  = self.inputs.starting_kpoints_distance.value
         self.ctx.min_kpoints_distance      = self.inputs.min_kpoints_distance.value
@@ -279,18 +277,17 @@ class FindCrossingsWorkChain(WorkChain):
     def analyze_bands(self):
         """Extract kpoints with gap lower than the gap threshold"""
         workchain = self.ctx.workchain_nscf[self.ctx.iteration - 1]
-        bands      = workchain.outputs.output_band
+        bands     = workchain.outputs.output_band
 
-        vb        = self.ctx.vb
-        cb        = self.ctx.cb
-
-        vb_cb = orm.ArrayData()
-        vb_cb.set_array('vb_cb', np.array([vb, cb]))
+        if self.ctx.found_crossings:
+            last = self.ctx.found_crossings[-1]
+        else:
+            last = orm.ArrayData()
 
         self.report('Analyzing nscf results for BandsData<{}>'.format(bands.pk))
         res = get_crossing_and_lowgap_points(
-            bands, vb_cb, orm.Float(self.ctx.gap_threshold),
-            orm.Bool(not bool(len(self.ctx.found_crossings)))
+            bands, self.ctx.el_info, self.inputs.gap_threshold, last
+            # orm.Bool(not bool(len(self.ctx.found_crossings)))
             )
 
         self.ctx.found_crossings.append(res)

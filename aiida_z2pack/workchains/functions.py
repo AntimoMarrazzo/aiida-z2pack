@@ -100,28 +100,34 @@ def generate_cubic_grid(structure, centers, distance, dim):
     return kpt
 
 @calcfunction
-def get_crossing_and_lowgap_points(bands_data, vb_cb, gap_threshold, wide_scope):
+def get_crossing_and_lowgap_points(bands_data, el_info, gap_threshold, last):
     if not isinstance(bands_data, orm.BandsData):
         raise ValueError("Invalide type {} for parameter `bands_data`".format(type(bands_data)))
-    if not isinstance(vb_cb, orm.ArrayData):
-        raise ValueError("Invalide type {} for parameter `vb_cb`".format(type(vb_cb)))
+    if not isinstance(el_info, orm.Dict):
+        raise ValueError("Invalide type {} for parameter `el_info`".format(type(el_info)))
     if not isinstance(gap_threshold, orm.Float):
         raise ValueError("Invalide type {} for parameter `gap_threshold`".format(type(gap_threshold)))
+    if not isinstance(last, orm.ArrayData):
+        raise ValueError("Invalide type {} for parameter `last`".format(type(last)))
+
+    info = el_info.get_dict()
     
     bands   = bands_data.get_bands()
     kpoints = bands_data.get_kpoints()
-    vb, cb  = vb_cb.get_array('vb_cb')
+    vb      = info['vb']
+    cb      = info['cb']
     gap_thr = gap_threshold.value
     gaps    = bands[:,cb] - bands[:,vb]
-    scope   = wide_scope.value
 
-    if scope:
+    if not 'pinned' in last.get_arraynames():
         min_gap = gaps.min()
         pinned_thr = min(min_gap * 2.0, 0.1)
 
         where_pinned = np.where((gap_thr < gaps) & (gaps <= pinned_thr))
         where_found  = np.where(gaps <= gap_thr)
     else:
+        last_pinned = last.get_array('pinned')
+        # TODO!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         where_found = np.where(gaps <= gap_thr)
         if not len(where_found[0]):
             where_pinned = [gaps.argmin(),]
@@ -133,6 +139,21 @@ def get_crossing_and_lowgap_points(bands_data, vb_cb, gap_threshold, wide_scope)
     res.set_array('found', kpoints[where_found])
 
     return res
+
+@calcfunction
+def get_el_info(params):
+    if not isinstance(params, orm.Dict):
+        raise ValueError("Invalide type {} for parameter `params`".format(type(params)))
+
+    res = {}
+    n_el = params['number_of_electrons']
+    spin = params['spin_orbit_calculation']
+
+    res['n_el'] = n_el
+    res['cb']   = int(n_el) // (int(not spin) + 1)
+    res['vb']   = res['cb'] - 1
+
+    return orm.Dict(dict=res)
 
 @calcfunction
 def get_kpoint_grid_dimensionality(kpt_data):
