@@ -214,9 +214,10 @@ class FindCrossingsWorkChain(WorkChain):
         else:
             self.ctx.inputs = AttributeDict(self.exposed_inputs(PwBaseWorkChain, namespace='scf'))
 
-        self.ctx.inputs.pw.parameters = self.ctx.inputs.pw.parameters.get_dict()
-        self.ctx.inputs.pw.parameters.setdefault('CONTROL', {})
-        self.ctx.inputs.pw.parameters['CONTROL']['calculation'] = 'nscf'
+            self.ctx.inputs.pw.parameters = self.ctx.inputs.pw.parameters.get_dict()
+            self.ctx.inputs.pw.parameters.setdefault('CONTROL', {})
+            self.ctx.inputs.pw.parameters['CONTROL']['calculation'] = 'nscf'
+            
         self.ctx.inputs.pw.parent_folder = self.ctx.scf_folder
         self.ctx.inputs.clean_workdir = self.inputs.clean_workdir
         self.ctx.inputs.pw.structure  = self.ctx.current_structure
@@ -224,7 +225,7 @@ class FindCrossingsWorkChain(WorkChain):
         self.ctx.inputs.pw.code       = self.inputs.code
 
         workchain = self.ctx.workchain_scf
-        pw_params = workchain.outputs.output_parameters.get_dict()
+        pw_params = workchain.outputs.output_parameters
         self.ctx.el_info = get_el_info(pw_params)
 
         self.ctx.current_kpoints_distance  = self.inputs.starting_kpoints_distance.value

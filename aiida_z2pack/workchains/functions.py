@@ -63,15 +63,17 @@ def generate_cubic_grid(structure, centers, distance, dim):
     if not isinstance(distance, orm.Float):
         raise ValueError("Invalide type {} for parameter `distance`".format(type(distance)))
 
+    npoints = 7
+
     cell     = structure.cell
     centers  = centers.get_array('pinned')
-    distance = distance.value
+    distance = distance.value / (npoints-1)
     dim      = dim.value
     recipr   = recipr_base(cell)
 
     centers  = np.dot(centers, recipr)
 
-    l    = np.arange(-3,4)
+    l    = np.arange(-npoints//2, (npoints-1)//2 + 1) + ((npoints + 1)%2) * 0.5
     lx   = l
     ly   = l if dim > 1 else [0,]
     lz   = l if dim > 2 else [0,]
@@ -114,6 +116,9 @@ def get_crossing_and_lowgap_points(bands_data, el_info, gap_threshold, last):
     
     bands   = bands_data.get_bands()
     kpoints = bands_data.get_kpoints()
+    cell    = bands_data.cell
+    recipr  = recipr_base(cell)
+    kpt_c   = np.dot(kpoints, recipr)
     vb      = info['vb']
     cb      = info['cb']
     gap_thr = gap_threshold.value
@@ -126,13 +131,21 @@ def get_crossing_and_lowgap_points(bands_data, el_info, gap_threshold, last):
         where_pinned = np.where((gap_thr < gaps) & (gaps <= pinned_thr))
         where_found  = np.where(gaps <= gap_thr)
     else:
-        last_pinned = last.get_array('pinned')
-        # TODO!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         where_found = np.where(gaps <= gap_thr)
-        if not len(where_found[0]):
-            where_pinned = [gaps.argmin(),]
-        else:
-            where_pinned = []
+
+        last_pinned = last.get_array('pinned')
+        wg = np.where(gaps > gap_thr)[0]
+        app_g = gaps[wg]
+
+        centers = KDTree(last_pinned)
+        kpt     = KDTree(kpt_c[wg])
+        dist    = np.sum((kpt_c[0] - kpt_c[1])**2)**.5
+        query   = centers.query_ball_tree(kpt, r=dist*1.74)
+
+        where_pinned = []
+        for q in query:
+            app = app_g[q].argmin()
+            where_pinned.append(q[app])
 
     res = orm.ArrayData()
     res.set_array('pinned', kpoints[where_pinned])
