@@ -17,7 +17,7 @@ def get_gap_array_from_PwCalc(calculation):
     cb = int(n_el) // (int(not spin) + 1)
     vb = cb - 1
 
-    bands_data = calcfunction.outputs.output_band
+    bands_data = calculation.outputs.output_band
     bands = bands_data.get_bands()
 
     return bands[:,cb] - bands[:,vb]
@@ -183,7 +183,10 @@ def get_kpoint_grid_dimensionality(kpt_data):
     if not isinstance(kpt_data, orm.KpointsData):
         raise ValueError("Invalide type {} for parameter `kpt_data`".format(type(kpt_data)))
 
-    mesh = kpt_data.get_kpoints_mesh()[0]
+    try:
+        mesh = kpt_data.get_kpoints_mesh()[0]
+    except:
+        return orm.Int(3)
 
     dim = sum([j != 1 for j in mesh])
    
