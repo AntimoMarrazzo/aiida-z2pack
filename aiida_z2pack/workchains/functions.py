@@ -134,6 +134,7 @@ def get_crossing_and_lowgap_points(bands_data, el_info, gap_threshold, last):
         where_found = np.where(gaps <= gap_thr)
 
         last_pinned = last.get_array('pinned')
+        last_pinned = np.dot(last_pinned, recipr)
         wg = np.where(gaps > gap_thr)[0]
         app_g = gaps[wg]
 
@@ -145,7 +146,7 @@ def get_crossing_and_lowgap_points(bands_data, el_info, gap_threshold, last):
         where_pinned = []
         for q in query:
             app = app_g[q].argmin()
-            where_pinned.append(q[app])
+            where_pinned.append(wg[q[app]])
 
     res = orm.ArrayData()
     res.set_array('pinned', kpoints[where_pinned])
