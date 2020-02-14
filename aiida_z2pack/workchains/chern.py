@@ -116,7 +116,6 @@ class FindCrossingsWorkChain(WorkChain):
                 cls.run_nscf,
                 cls.inspect_nscf,
                 cls.analyze_bands,
-                # cls.post_analysis,
                 cls.stepper
                 ),
             cls.results
@@ -306,34 +305,32 @@ class FindCrossingsWorkChain(WorkChain):
             # orm.Bool(not bool(len(self.ctx.found_crossings)))
             )
 
+        pinned = res.get_array('pinned')
+        found  = res.get_array('found')
+        n_pinned = len(pinned)
+        n_found  = len(found)
+        self.report('`{}` low-gap points found.'.format(n_pinned))
+        self.report('`{}` crossing points found.'.format(n_found))
+
+        if not n_pinned:
+            self.report('No low-gap points found to continue loop. iteration <{}>'.format(self.ctx.iteration))
+            self.ctx.do_loop = False
+
         self.ctx.found_crossings.append(res)
 
     def stepper(self):
         """Perform the loop step operation of modifying the thresholds"""
-
         if self.ctx.flag:
             self.ctx.do_loop = False
             return
 
-        if self.ctx.iteration > 1:
+        if self.ctx.iteration > 1 and self.ctx.do_loop:
             self.ctx.current_kpoints_distance /= self.ctx.scale_kpoints_distance
             if self.ctx.current_kpoints_distance <= self.ctx.min_kpoints_distance:
                 self.ctx.current_kpoints_distance = self.ctx.min_kpoints_distance
                 self.ctx.flag = True
 
-        last = self.ctx.found_crossings[-1]
-        pinned = last.get_array('pinned')
-        found = last.get_array('found')
-
-        n_pinned = len(pinned)
-        n_found  = len(found)
-        self.report('`{}` low-gap points found.'.format(n_pinned))
-        self.report('`{}` crossing points found.'.format(n_found))
-        if n_pinned:
             self.report('Kpoints distance reduced to `{}`'.format(self.ctx.current_kpoints_distance))
-        else:
-            self.report('No low-gap points found to continue loop. iteration <{}>'.format(self.ctx.iteration))
-            self.ctx.do_loop = False
 
     def results(self):
         calculation = self.ctx.workchain_nscf[self.ctx.iteration - 1]
@@ -348,13 +345,11 @@ class FindCrossingsWorkChain(WorkChain):
                 'WARNING: No crossing found. Reached the minimum kpoints distance {}: last ran PwBaseWorkChain<{}>'.format(
                 self.ctx.min_kpoints_distance, calculation.pk
                 ))
-            # return self.exit_codes.ERROR_MINIMUM_DISTANCE_RAECHED
         if not self.ctx.do_loop and not n_found:
             self.report(
                 'WARNING: No crossing found. Did not find any low-gap points to continue loop. iteration <{}>'.format(
                     self.ctx.iteration
                     ))
-            # return self.exit_codes.ERROR_CANT_PINPOINT_LOWGAP_ZONE
 
         self.out('crossings', found)
 
