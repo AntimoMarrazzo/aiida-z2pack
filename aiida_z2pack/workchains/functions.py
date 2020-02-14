@@ -77,7 +77,7 @@ def generate_cubic_grid(structure, centers, distance, dim):
     if not isinstance(distance, orm.Float):
         raise ValueError("Invalide type {} for parameter `distance`".format(type(distance)))
 
-    npoints = 7
+    npoints = 5
 
     cell     = structure.cell
     centers  = centers.get_array('pinned')
@@ -140,6 +140,7 @@ def get_crossing_and_lowgap_points(bands_data, gap_threshold, last):
         where_pinned = np.where((gap_thr < gaps) & (gaps <= pinned_thr))
         where_found  = np.where(gaps <= gap_thr)
     else:
+        dist = calculation.inputs.kpoints.creator.inputs.distance.value
         where_found = np.where(gaps <= gap_thr)
 
         last_pinned = last.get_array('pinned')
@@ -149,7 +150,6 @@ def get_crossing_and_lowgap_points(bands_data, gap_threshold, last):
 
         centers = KDTree(last_pinned)
         kpt     = KDTree(kpt_c[wg])
-        dist    = np.sum((kpt_c[0] - kpt_c[1])**2)**.5
         query   = centers.query_ball_tree(kpt, r=dist*1.74)
 
         where_pinned = []

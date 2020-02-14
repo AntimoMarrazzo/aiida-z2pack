@@ -74,12 +74,12 @@ class FindCrossingsWorkChain(WorkChain):
 
         spec.input(
             'min_kpoints_distance', valid_type=orm.Float,
-            default=orm.Float(1E-5),
+            default=orm.Float(6.E-5),
             help='Stop iterations when `kpoints_distance`  drop below this value.'
             )
         spec.input(
             'starting_kpoints_distance', valid_type=orm.Float,
-            default=orm.Float(0.05),
+            default=orm.Float(0.2),
             help='Strating distance between kpoints.'
             )
         spec.input(
@@ -296,7 +296,6 @@ class FindCrossingsWorkChain(WorkChain):
         self.report('Analyzing nscf results for BandsData<{}>'.format(bands.pk))
         res = get_crossing_and_lowgap_points(
             bands, self.inputs.gap_threshold, last
-            # orm.Bool(not bool(len(self.ctx.found_crossings)))
             )
 
         pinned = res.get_array('pinned')
