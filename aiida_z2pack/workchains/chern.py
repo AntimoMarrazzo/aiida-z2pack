@@ -10,7 +10,7 @@ from aiida_quantumespresso.utils.mapping import prepare_process_inputs
 
 from .functions import (
     generate_cubic_grid, get_kpoint_grid_dimensionality,
-    get_crossing_and_lowgap_points, merge_crossing_results, get_el_info
+    get_crossing_and_lowgap_points, merge_crossing_results
     )
 
 # Z2packCalculation   = CalculationFactory('z2pack.z2pack')
@@ -223,10 +223,6 @@ class FindCrossingsWorkChain(WorkChain):
         self.ctx.inputs.pw.pseudos    = self.inputs.pseudos
         self.ctx.inputs.pw.code       = self.inputs.code
 
-        workchain = self.ctx.workchain_scf
-        pw_params = workchain.outputs.output_parameters
-        self.ctx.el_info = get_el_info(pw_params)
-
         self.ctx.current_kpoints_distance  = self.inputs.starting_kpoints_distance.value
         self.ctx.min_kpoints_distance      = self.inputs.min_kpoints_distance.value
         self.ctx.scale_kpoints_distance    = self.inputs.scale_kpoints_distance.value
@@ -292,8 +288,7 @@ class FindCrossingsWorkChain(WorkChain):
 
     def analyze_bands(self):
         """Extract kpoints with gap lower than the gap threshold"""
-        bands     = self.ctx.bands
-
+        bands = self.ctx.bands
         if self.ctx.found_crossings:
             last = self.ctx.found_crossings[-1]
         else:
@@ -301,7 +296,7 @@ class FindCrossingsWorkChain(WorkChain):
 
         self.report('Analyzing nscf results for BandsData<{}>'.format(bands.pk))
         res = get_crossing_and_lowgap_points(
-            bands, self.ctx.el_info, self.inputs.gap_threshold, last
+            bands, self.inputs.gap_threshold, last
             # orm.Bool(not bool(len(self.ctx.found_crossings)))
             )
 

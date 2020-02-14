@@ -8,6 +8,20 @@ from aiida.engine import calcfunction
 def recipr_base(base):
     return np.linalg.inv(base).T * 2 * np.pi
 
+def get_gap_array_from_PwCalc(calculation):
+    params = calculation.outputs.output_parameters
+
+    n_el = params['number_of_electrons']
+    spin = params['spin_orbit_calculation']
+
+    cb = int(n_el) // (int(not spin) + 1)
+    vb = cb - 1
+
+    bands_data = calcfunction.outputs.output_band
+    bands = bands_data.get_bands()
+
+    return bands[:,cb] - bands[:,vb]
+
 @calcfunction
 def crop_kpoints(structure, kpt_data, centers, radius):
     """
@@ -102,27 +116,22 @@ def generate_cubic_grid(structure, centers, distance, dim):
     return kpt
 
 @calcfunction
-def get_crossing_and_lowgap_points(bands_data, el_info, gap_threshold, last):
+def get_crossing_and_lowgap_points(bands_data, gap_threshold, last):
     if not isinstance(bands_data, orm.BandsData):
         raise ValueError("Invalide type {} for parameter `bands_data`".format(type(bands_data)))
-    if not isinstance(el_info, orm.Dict):
-        raise ValueError("Invalide type {} for parameter `el_info`".format(type(el_info)))
     if not isinstance(gap_threshold, orm.Float):
         raise ValueError("Invalide type {} for parameter `gap_threshold`".format(type(gap_threshold)))
     if not isinstance(last, orm.ArrayData):
         raise ValueError("Invalide type {} for parameter `last`".format(type(last)))
 
-    info = el_info.get_dict()
-    
-    bands   = bands_data.get_bands()
+    calculation = bands_data.creator
+    gaps = get_gap_array_from_PwCalc(calculation)
     kpoints = bands_data.get_kpoints()
-    cell    = bands_data.cell
+    cell = bands_data.cell
+    
     recipr  = recipr_base(cell)
     kpt_c   = np.dot(kpoints, recipr)
-    vb      = info['vb']
-    cb      = info['cb']
     gap_thr = gap_threshold.value
-    gaps    = bands[:,cb] - bands[:,vb]
 
     if not 'pinned' in last.get_arraynames():
         min_gap = gaps.min()
