@@ -268,6 +268,9 @@ class FindCrossingsWorkChain(WorkChain):
 
     def run_nscf(self):
         self.ctx.iteration += 1
+        if self.ctx.iteration == 2:
+            self.ctx.workchain_nscf.append(load_node(9657))
+            return
         inputs = self.ctx.inputs
         inputs.kpoints = self.ctx.current_kpoints
 
