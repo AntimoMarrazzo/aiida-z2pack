@@ -1,7 +1,4 @@
-import numpy as np
-
 from aiida import orm
-from aiida.orm.utils import load_node
 from aiida.common import AttributeDict
 from aiida.plugins import WorkflowFactory, DataFactory
 from aiida.engine import WorkChain, ToContext, if_, while_, append_
@@ -74,7 +71,7 @@ class FindCrossingsWorkChain(WorkChain):
 
         spec.input(
             'min_kpoints_distance', valid_type=orm.Float,
-            default=orm.Float(6.E-5),
+            default=orm.Float(5.E-4),
             help='Stop iterations when `kpoints_distance`  drop below this value.'
             )
         spec.input(
@@ -94,7 +91,7 @@ class FindCrossingsWorkChain(WorkChain):
             )
         spec.input(
             'gap_threshold', valid_type=orm.Float,
-            default=orm.Float(0.001),
+            default=orm.Float(0.0025),
             help='kpoints ith gap < `gap_threshold` are considered possible crossings.'
             )
 
@@ -188,12 +185,11 @@ class FindCrossingsWorkChain(WorkChain):
         inputs.pw.parameters['CONTROL']['calculation'] = 'scf'
 
         inputs = prepare_process_inputs(PwBaseWorkChain, inputs)
-        # running = self.submit(PwBaseWorkChain, **inputs)
+        running = self.submit(PwBaseWorkChain, **inputs)
 
-        # self.report('launching PwBaseWorkChain<{}> in {} mode'.format(running.pk, 'scf'))
+        self.report('launching PwBaseWorkChain<{}> in {} mode'.format(running.pk, 'scf'))
 
-        # return ToContext(workchain_scf=running)
-        self.ctx.workchain_scf = load_node(9526)
+        return ToContext(workchain_scf=running)
 
     def inspect_scf(self):
         """Verify that the PwBaseWorkChain for the scf run finished successfully."""

@@ -87,7 +87,7 @@ def generate_cubic_grid(structure, centers, distance, dim):
 
     centers  = np.dot(centers, recipr)
 
-    l    = np.arange(-npoints//2, (npoints-1)//2 + 1) + ((npoints + 1)%2) * 0.5
+    l    = np.arange(-(npoints-1)//2, (npoints-1)//2 + 1) + ((npoints + 1)%2) * 0.5
     lx   = l
     ly   = l if dim > 1 else [0,]
     lz   = l if dim > 2 else [0,]
@@ -141,7 +141,6 @@ def get_crossing_and_lowgap_points(bands_data, gap_threshold, last):
         where_found  = np.where(gaps <= gap_thr)
     else:
         dist = calculation.inputs.kpoints.creator.inputs.distance.value
-        where_found = np.where(gaps <= gap_thr)
 
         last_pinned = last.get_array('pinned')
         last_pinned = np.dot(last_pinned, recipr)
@@ -150,17 +149,28 @@ def get_crossing_and_lowgap_points(bands_data, gap_threshold, last):
 
         centers = KDTree(last_pinned)
         kpt     = KDTree(kpt_c[wg])
-        query   = centers.query_ball_tree(kpt, r=dist*1.74)
+        query   = centers.query_ball_tree(kpt, r=dist*1.74/2)
 
+        lim = max(-5 // np.log10(dist), 1)
+        if dist < 0.01:
+            lim = 1
         where_pinned = []
+        where_found  = []
         for q in query:
             q = np.array(q)
-            if dist > 0.05 and len(last_pinned) < 10:
-                min_gap =  app_g[q].min()
-                app = np.where(app_g[q] < min_gap * 2.5)[0]
-            else:
-                app = [app_g[q].argmin()]
+            if gaps[q].min() < gap_thr:
+                where_found.append(q[gaps[q].argmin()])
+            min_gap = app_g[q].min()
+            scale = 2.5 if lim > 1 else 1.001
+            app = None
+            while app is None or len(app) > lim:
+                app = np.where(app_g[q] < min_gap * scale)[0]
+                scale *= 0.95
             where_pinned.extend(wg[q[app]])
+
+        where_pinned = np.unique(where_pinned)
+        where_found = np.array(where_found, dtype=np.int)
+        where_found = np.unique(where_found)
 
     res = orm.ArrayData()
     res.set_array('pinned', kpoints[where_pinned])
