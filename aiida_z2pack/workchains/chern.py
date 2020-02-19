@@ -322,14 +322,10 @@ class FindCrossingsWorkChain(WorkChain):
     def analyze_bands(self):
         """Extract kpoints with gap lower than the gap threshold"""
         bands = self.ctx.bands
-        if self.ctx.found_crossings:
-            last = self.ctx.found_crossings[-1]
-        else:
-            last = orm.ArrayData()
 
         self.report('Analyzing nscf results for BandsData<{}>'.format(bands.pk))
         res = get_crossing_and_lowgap_points(
-            bands, self.inputs.gap_threshold, last
+            bands, self.inputs.gap_threshold
             )
 
         pinned = res.get_array('pinned')

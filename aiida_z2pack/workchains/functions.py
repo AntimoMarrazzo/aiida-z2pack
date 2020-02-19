@@ -79,14 +79,10 @@ def generate_cubic_grid(structure, centers, distance, dim):
 
     npoints = 5
 
-    cell    = structure.cell
     centers = centers.get_array('pinned')
     dist    = distance.value / (npoints-1)
     dim     = dim.value
     
-    recipr  = recipr_base(cell)
-    centers = np.dot(centers, recipr)
-
     l    = np.arange(-(npoints-1)//2, (npoints-1)//2 + 1) + ((npoints + 1)%2) * 0.5
     lx   = l
     ly   = l if dim > 1 else [0,]
@@ -116,13 +112,11 @@ def generate_cubic_grid(structure, centers, distance, dim):
     return kpt
 
 @calcfunction
-def get_crossing_and_lowgap_points(bands_data, gap_threshold, last):
+def get_crossing_and_lowgap_points(bands_data, gap_threshold):
     if not isinstance(bands_data, orm.BandsData):
         raise ValueError("Invalide type {} for parameter `bands_data`".format(type(bands_data)))
     if not isinstance(gap_threshold, orm.Float):
         raise ValueError("Invalide type {} for parameter `gap_threshold`".format(type(gap_threshold)))
-    if not isinstance(last, orm.ArrayData):
-        raise ValueError("Invalide type {} for parameter `last`".format(type(last)))
 
     calculation = bands_data.creator
     gaps = get_gap_array_from_PwCalc(calculation)
@@ -135,54 +129,48 @@ def get_crossing_and_lowgap_points(bands_data, gap_threshold, last):
     # kpt_c   = np.dot(kpoints, recipr)
     gap_thr = gap_threshold.value
 
-    if not 'pinned' in last.get_arraynames():
-        min_gap = gaps.min()
-        pinned_thr = min(min_gap * 2.5, 0.4)
+    try:
+        kki = calculation.inputs.kpoints.creator.inputs
+        last_pinned = kki.centers.get_array('pinned')
+        dist = kki.distance.value
+    except:
+        dist = 200
+        last_pinned = np.array([[0.,0.,0.]])
 
-        where_pinned = np.where((gap_thr < gaps) & (gaps <= pinned_thr))
-        where_found  = np.where(gaps <= gap_thr)
-    else:
-        dist = calculation.inputs.kpoints.creator.inputs.distance.value
+    centers  = KDTree(last_pinned)
+    kpt_tree = KDTree(kpt_cart)
+    query    = centers.query_ball_tree(kpt_tree, r=dist*1.74/2) #~sqrt(3) / 2
 
-        last_pinned = last.get_array('pinned')
-        # last_pinned = np.dot(last_pinned, recipr)
-        # wg = np.where(gaps > gap_thr)[0]
-        # app_g = gaps[wg]
+    lim = max(-5 // np.log10(dist), 1)  if dist < 1 else 200
+    if dist < 0.01:
+        lim = 1
+    where_pinned = []
+    where_found  = []
+    for n,q in enumerate(query):
+        q = np.array(q, dtype=np.int)
 
-        centers  = KDTree(last_pinned)
-        kpt_tree = KDTree(kpt_cart)
-        query    = centers.query_ball_tree(kpt_tree, r=dist*1.74/2) #~sqrt(3) / 2
+        if len(q) == 0:
+            continue
 
-        lim = max(-5 // np.log10(dist), 1)
-        if dist < 0.01:
-            lim = 1
-        where_pinned = []
-        where_found  = []
-        for n,q in enumerate(query):
-            q = np.array(q, dtype=np.int)
+        _, i = kpt_tree.query(last_pinned[n])
+        prev_min_gap = gaps[i]
+        min_gap = gaps[q].min()
 
-            if len(q) == 0:
-                continue
+        if min_gap / prev_min_gap > 0.9 and dist < 0.05:
+            continue
 
-            _, i = kpt_tree.query(last_pinned[n])
-            prev_min_gap = gaps[i]
-            min_gap = gaps[q].min()
+        app = None
+        scale = 2.5 if lim > 1 else 1.001
+        while app is None or len(app) > lim:
+            app = np.where(gaps[q] < min_gap * scale)[0]
+            scale *= 0.95
+        where_found.extend([q[i] for i in app if gaps[q[i]] <= gap_thr])
+        where_pinned.extend([q[i] for i in app if gaps[q[i]] > gap_thr])
 
-            if min_gap / prev_min_gap > 0.9 and dist < 0.05:
-                continue
-
-            app = None
-            scale = 2.5 if lim > 1 else 1.001
-            while app is None or len(app) > lim:
-                app = np.where(gaps[q] < min_gap * scale)[0]
-                scale *= 0.95
-            where_found.extend([q[i] for i in app if gaps[q[i]] <= gap_thr])
-            where_pinned.extend([q[i] for i in app if gaps[q[i]] > gap_thr])
-
-        where_pinned = np.array(where_pinned, dtype=np.int)
-        where_pinned = np.unique(where_pinned)
-        where_found = np.array(where_found, dtype=np.int)
-        where_found = np.unique(where_found)
+    where_pinned = np.array(where_pinned, dtype=np.int)
+    where_pinned = np.unique(where_pinned)
+    where_found = np.array(where_found, dtype=np.int)
+    where_found = np.unique(where_found)
 
     res = orm.ArrayData()
     res.set_array('pinned', kpt_cart[where_pinned])
