@@ -160,10 +160,6 @@ class Z2packCalculation(CalcJob):
             130, 'ERROR_NO_RETRIEVED_FOLDER',
             message='The retrieved folder data node could not be accessed.'
             )
-        # spec.exit_code(
-        #     140, 'ERROR_MISSING_Z2PACK_OUTFILE',
-        #     message='The output file of z2pack \'{}\' is missing!'.format(cls._OUTPUT_Z2PACK_FILE)
-        #     )
         spec.exit_code(
             210, 'ERROR_MISSING_RESULTS_FILE',
             message=(
@@ -185,7 +181,6 @@ class Z2packCalculation(CalcJob):
         calcinfo = datastructures.CalcInfo()
 
         codeinfo = datastructures.CodeInfo()
-        # codeinfo.cmdline_params = (['>', self._OUTPUT_Z2PACK_FILE])
         codeinfo.stdout_name = self._OUTPUT_Z2PACK_FILE
         codeinfo.stdin_name  = self._INPUT_Z2PACK_FILE
         codeinfo.code_uuid   = self.inputs.code.uuid
@@ -220,12 +215,7 @@ class Z2packCalculation(CalcJob):
         parent = self.inputs.parent_folder
         rpath  = parent.get_remote_path()
         uuid   = parent.computer.uuid
-        parent_type = get_parent_type(parent)
-
-        # save_path       = os.path.join(self._OUTPUT_SUBFOLDER, '{}.save'.format(self._PREFIX))
-        # remote_xml_path = os.path.join(save_path, PwCalculation._DATAFILE_XML_POST_6_2)
-        # paw_name        = 'paw.txt'
-        # remote_paw_path = os.path.join(save_path, paw_name)
+        parent_type = parent.creator.process_class
 
         self.restart_mode = False
         if parent_type == PwCalculation:
@@ -251,24 +241,11 @@ class Z2packCalculation(CalcJob):
             calcinfo.remote_copy_list.extend(
                 [(uuid, os.path.join(rpath, inp), inp) for inp in inputs]
                 )
-            # calcinfo.remote_copy_list.append(
-            #     (
-            #         uuid,
-            #         os.path.join(rpath, save_path),
-            #         save_path,
-            #     ))
         else:
             raise exceptions.ValidationError(
                 "parent node must be either from a PWscf or a Z2pack calculation."
                 )
 
-
-        # calcinfo.remote_copy_list.append(
-        #     (
-        #         uuid,
-        #         os.path.join(rpath, self._PSEUDO_SUBFOLDER),
-        #         self._PSEUDO_SUBFOLDER
-        #     ))
         parent_files = [self._PSEUDO_SUBFOLDER, self._OUTPUT_SUBFOLDER]
         calcinfo.remote_copy_list.extend(
             [(uuid, os.path.join(rpath, fname), fname) for fname in parent_files]
@@ -278,25 +255,14 @@ class Z2packCalculation(CalcJob):
 
         return calcinfo
 
-    def _get_parent_type(self):
-        parent = self.inputs.parent_folder
-
-        scf = parent.get_incoming(node_class=PwCalculation)
-        if scf:
-            return PwCalculation
-
-        z2pack = parent.get_incoming(node_class=Z2packCalculation)
-        if z2pack:
-            return Z2packCalculation
-
     def _set_inputs_from_parent_scf(self):
         parent = self.inputs.parent_folder
-        calc   = parent.get_incoming(node_class=PwCalculation).first().node
+        calc   = parent.creator
 
         pseudos      = calc.get_incoming(link_label_filter='pseudos%').all()
         pseudos_dict = {name[9:]:upf for upf,_,name in pseudos}
         self.inputs.pseudos       = pseudos_dict
-        self.inputs.structure     = calc.get_incoming(link_label_filter='structure').first().node
+        self.inputs.structure     = calc.inputs.structure
 
         merge_dict_input_to_root(
             self,
@@ -306,7 +272,7 @@ class Z2packCalculation(CalcJob):
 
     def _set_inputs_from_parent_z2pack(self):
         parent = self.inputs.parent_folder
-        calc   = parent.get_incoming(node_class=Z2packCalculation).first().node
+        calc   = parent.creator
         # calc   = self._get_root_parent()
 
         for label in ['pw_code', 'overlap_code', 'wannier90_code', 'code']:
@@ -324,74 +290,6 @@ class Z2packCalculation(CalcJob):
             'pw_settings',
             'z2pack_settings'
             )
-
-
-    def use_pseudos_from_family(self, family_name):
-        """
-        Set the pseudo to use for all atomic kinds, picking pseudos from the
-        family with name family_name.
-
-        :note: The structure must already be set.
-
-        :param family_name: the name of the group containing the pseudos
-        """
-        from collections import defaultdict
-
-        try:
-            structure = self._get_reference_structure()
-        except AttributeError:
-            raise ValueError("Structure is not set yet! Therefore, the method "
-                             "use_pseudos_from_family cannot automatically set "
-                             "the pseudos")
-
-        # A dict {kind_name: pseudo_object}
-        kind_pseudo_dict = get_pseudos_from_structure(structure, family_name)
-
-        # We have to group the species by pseudo, I use the pseudo PK
-        # pseudo_dict will just map PK->pseudo_object
-        pseudo_dict = {}
-        # Will contain a list of all species of the pseudo with given PK
-        pseudo_species = defaultdict(list)
-
-        for kindname, pseudo in kind_pseudo_dict.iteritems():
-            pseudo_dict[pseudo.pk] = pseudo
-            pseudo_species[pseudo.pk].append(kindname)
-
-        for pseudo_pk in pseudo_dict:
-            pseudo = pseudo_dict[pseudo_pk]
-            kinds = pseudo_species[pseudo_pk]
-            # I set the pseudo for all species, sorting alphabetically
-            self.use_pseudo(pseudo, sorted(kinds))
-
-    def _get_reference_structure(self):
-        """
-        Used to get the reference structure to obtain which 
-        pseudopotentials to use from a given family using 
-        use_pseudos_from_family. 
-        
-        :note: this method can be redefined in a given subclass
-               to specify which is the reference structure to consider.
-        """
-        # return self.get_inputs_dict()[self.get_linkname('structure')]
-        return self.get_incoming().get_node_by_label('structure')
-
-    def _set_parent_remotedata(self, remotedata):
-        """
-        Used to set a parent remotefolder in the restart of ph.
-        """
-        from aiida.common.exceptions import ValidationError
-
-        if not isinstance(remotedata, orm.RemoteData):
-            raise ValueError('remotedata must be a orm.RemoteData')
-
-        # complain if another remotedata is already found
-        # input_remote = self.get_inputs(type=orm.RemoteData)
-        input_remote = self.get_incoming(node_class=orm.RemoteData).all()
-        if input_remote:
-            raise ValidationError("Cannot set several parent calculation to a "
-                                  "{} calculation".format(self.__class__.__name__))
-
-        self.use_parent_folder(remotedata)
        
     def use_parent_calculation(self, calc):
         """
@@ -417,13 +315,3 @@ class Z2packCalculation(CalcJob):
         self.use_parent_folder(remote_folder)
         
         
-        
-
-def get_parent_type(node):
-    scf = node.get_incoming(node_class=PwCalculation)
-    if scf:
-        return PwCalculation
-
-    z2pack = node.get_incoming(node_class=Z2packCalculation)
-    if z2pack:
-        return Z2packCalculation
