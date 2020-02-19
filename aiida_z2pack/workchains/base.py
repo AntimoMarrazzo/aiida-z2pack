@@ -27,7 +27,7 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
         # SCF INPUTS ###########################################################
         spec.expose_inputs(
             PwBaseWorkChain, namespace='scf',
-            exclude=('clean_workdir', 'pw.structure'),
+            exclude=('clean_workdir', 'pw.structure', 'pw.code'),
             namespace_options={
                 'help': 'Inputs for the `PwBaseWorkChain` for the SCF calculation.'
                 }
@@ -35,6 +35,10 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
         spec.input(
             'structure', valid_type=orm.StructureData,
             help='The inputs structure.'
+            )
+        spec.input(
+            'pw_code', valid_type=orm.Code,
+            help='The code for pw calculations.'
             )
         spec.input(
             'clean_workdir', valid_type=orm.Bool,
@@ -120,6 +124,7 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
     def run_scf(self):
         inputs = AttributeDict(self.exposed_inputs(PwBaseWorkChain, namespace='scf'))
         inputs.pw.structure = self.inputs.structure
+        inputs.pw.code      = self.inputs.pw_code
 
         running = self.submit(PwBaseWorkChain, **inputs)
 
@@ -151,8 +156,8 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
 
     def setup_z2pack(self):
         inputs = AttributeDict(self.exposed_inputs(Z2packCalculation, 'z2pack'))
-        if 'workchain_scf' in self.ctx:
-            inputs.pw_code = self.inputs.scf.pw.code
+        if 'scf' in self.inputs:
+            inputs.pw_code = self.inputs.pw_code
         inputs.parent_folder = self.ctx.parent_folder
         inputs.z2pack_settings = inputs.z2pack_settings.get_dict()
 
