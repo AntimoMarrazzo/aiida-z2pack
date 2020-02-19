@@ -79,19 +79,19 @@ def generate_cubic_grid(structure, centers, distance, dim):
 
     npoints = 5
 
-    cell     = structure.cell
-    centers  = centers.get_array('pinned')
-    distance = distance.value / (npoints-1)
-    dim      = dim.value
-    recipr   = recipr_base(cell)
-
-    centers  = np.dot(centers, recipr)
+    cell    = structure.cell
+    centers = centers.get_array('pinned')
+    dist    = distance.value / (npoints-1)
+    dim     = dim.value
+    
+    recipr  = recipr_base(cell)
+    centers = np.dot(centers, recipr)
 
     l    = np.arange(-(npoints-1)//2, (npoints-1)//2 + 1) + ((npoints + 1)%2) * 0.5
     lx   = l
     ly   = l if dim > 1 else [0,]
     lz   = l if dim > 2 else [0,]
-    grid = np.array(list(product(lx, ly, lz))) * distance
+    grid = np.array(list(product(lx, ly, lz))) * dist
 
     res = np.empty((0,3))
     for n,c in enumerate(centers):
@@ -102,7 +102,7 @@ def generate_cubic_grid(structure, centers, distance, dim):
             old_tree = KDTree(res)
             new_tree = KDTree(new)
 
-            query = new_tree.query_ball_tree(old_tree, r=distance)
+            query = new_tree.query_ball_tree(old_tree, r=dist*1.74)
 
             attach = np.array([new[n] for n,q in enumerate(query) if not q])
 
@@ -126,11 +126,13 @@ def get_crossing_and_lowgap_points(bands_data, gap_threshold, last):
 
     calculation = bands_data.creator
     gaps = get_gap_array_from_PwCalc(calculation)
-    kpoints = bands_data.get_kpoints()
-    cell = bands_data.cell
+    # kpoints = bands_data.get_kpoints()
+    kpt_cryst = bands_data.get_kpoints()
+    kpt_cart  = bands_data.get_kpoints(cartesian=True)
+    # cell = bands_data.cell
     
-    recipr  = recipr_base(cell)
-    kpt_c   = np.dot(kpoints, recipr)
+    # recipr  = recipr_base(cell)
+    # kpt_c   = np.dot(kpoints, recipr)
     gap_thr = gap_threshold.value
 
     if not 'pinned' in last.get_arraynames():
@@ -143,38 +145,44 @@ def get_crossing_and_lowgap_points(bands_data, gap_threshold, last):
         dist = calculation.inputs.kpoints.creator.inputs.distance.value
 
         last_pinned = last.get_array('pinned')
-        last_pinned = np.dot(last_pinned, recipr)
-        wg = np.where(gaps > gap_thr)[0]
-        app_g = gaps[wg]
+        # last_pinned = np.dot(last_pinned, recipr)
+        # wg = np.where(gaps > gap_thr)[0]
+        # app_g = gaps[wg]
 
-        centers = KDTree(last_pinned)
-        kpt     = KDTree(kpt_c[wg])
-        query   = centers.query_ball_tree(kpt, r=dist*1.74/2)
+        centers  = KDTree(last_pinned)
+        kpt_tree = KDTree(kpt_cart)
+        query    = centers.query_ball_tree(kpt_tree, r=dist*1.74/2) #~sqrt(3) / 2
 
         lim = max(-5 // np.log10(dist), 1)
         if dist < 0.01:
             lim = 1
         where_pinned = []
         where_found  = []
-        for q in query:
+        for n,q in enumerate(query):
             q = np.array(q)
-            if gaps[q].min() < gap_thr:
-                where_found.append(q[gaps[q].argmin()])
-            min_gap = app_g[q].min()
-            scale = 2.5 if lim > 1 else 1.001
+
+            _, i = kpt_tree.query(last_pinned[n])
+            prev_min_gap = gaps[i]
+            min_gap = gaps[q].min()
+
+            if min_gap / prev_min_gap > 0.9 and dist < 0.05:
+                continue
+
             app = None
+            scale = 2.5 if lim > 1 else 1.001
             while app is None or len(app) > lim:
-                app = np.where(app_g[q] < min_gap * scale)[0]
+                app = np.where(gaps[q] < min_gap * scale)[0]
                 scale *= 0.95
-            where_pinned.extend(wg[q[app]])
+            where_found.extend([q[i] for i in app if gaps[q[i]] <= gap_thr])
+            where_pinned.extend([q[i] for i in app if gaps[q[i]] > gap_thr])
 
         where_pinned = np.unique(where_pinned)
         where_found = np.array(where_found, dtype=np.int)
         where_found = np.unique(where_found)
 
     res = orm.ArrayData()
-    res.set_array('pinned', kpoints[where_pinned])
-    res.set_array('found', kpoints[where_found])
+    res.set_array('pinned', kpt_cart[where_pinned])
+    res.set_array('found', kpt_cryst[where_found])
 
     return res
 

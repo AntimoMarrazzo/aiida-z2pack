@@ -243,6 +243,7 @@ class FindCrossingsWorkChain(WorkChain):
         if 'starting_kpoints' in self.inputs:
             return True
 
+        self.report('No `starting_kpoints` provided. Using BandsData from `scf` calculation...')
         self.ctx.bands = self.ctx.workchain_scf.outputs.output_band
 
     def first_nscf_step(self):
@@ -325,7 +326,7 @@ class FindCrossingsWorkChain(WorkChain):
             self.ctx.do_loop = False
             return
 
-        if self.ctx.iteration > 1 and self.ctx.do_loop:
+        if self.ctx.do_loop:
             self.ctx.current_kpoints_distance /= self.ctx.scale_kpoints_distance
             if self.ctx.current_kpoints_distance <= self.ctx.min_kpoints_distance:
                 self.ctx.current_kpoints_distance = self.ctx.min_kpoints_distance
