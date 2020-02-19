@@ -86,7 +86,7 @@ class FindCrossingsWorkChain(WorkChain):
             )
         spec.input(
             'starting_kpoints', valid_type=orm.KpointsData,
-            required=True,
+            required=False,
             help='Starting mesh of kpoints'
             )
         spec.input(
@@ -105,8 +105,10 @@ class FindCrossingsWorkChain(WorkChain):
             cls.run_scf,
             cls.inspect_scf,
             cls.setup_nscf_loop,
-            cls.first_nscf_step,
-            cls.inspect_nscf,
+            if_(cls.should_do_first_nscf)(
+                cls.first_nscf_step,
+                cls.inspect_nscf,
+                ),
             cls.analyze_bands,
             while_(cls.should_find_zero_gap)(
                 cls.setup_grid,
@@ -225,13 +227,23 @@ class FindCrossingsWorkChain(WorkChain):
 
         self.ctx.gap_threshold = self.inputs.gap_threshold.value
 
-        self.ctx.dim = get_kpoint_grid_dimensionality(self.inputs.starting_kpoints)
+        if 'starting_kpoints' in self.inputs:
+            self.ctx.dim = get_kpoint_grid_dimensionality(self.inputs.starting_kpoints)
+        else:
+            self.ctx.dim = orm.Int(3)
 
         self.ctx.found_crossings = []
         self.ctx.do_loop = True
         self.ctx.flag = False
 
         self.report('Starting loop to find bands crossings.')
+
+    def should_do_first_nscf(self):
+        """Determine if the first nscf should be run using starting_kpoints"""
+        if 'starting_kpoints' in self.inputs:
+            return True
+
+        self.ctx.bands = self.ctx.workchain_scf.outputs.output_band
 
     def first_nscf_step(self):
         self.ctx.iteration += 1
@@ -341,6 +353,8 @@ class FindCrossingsWorkChain(WorkChain):
                     ))
 
         self.out('crossings', found)
+
+        self.report('FINISHED')
 
 
 class Z2pack3DChernWorkChain(WorkChain):
