@@ -159,7 +159,10 @@ def get_crossing_and_lowgap_points(bands_data, gap_threshold, last):
         where_pinned = []
         where_found  = []
         for n,q in enumerate(query):
-            q = np.array(q)
+            q = np.array(q, dtype=np.int)
+
+            if len(q) == 0:
+                continue
 
             _, i = kpt_tree.query(last_pinned[n])
             prev_min_gap = gaps[i]
@@ -176,6 +179,7 @@ def get_crossing_and_lowgap_points(bands_data, gap_threshold, last):
             where_found.extend([q[i] for i in app if gaps[q[i]] <= gap_thr])
             where_pinned.extend([q[i] for i in app if gaps[q[i]] > gap_thr])
 
+        where_pinned = np.array(where_pinned, dtype=np.int)
         where_pinned = np.unique(where_pinned)
         where_found = np.array(where_found, dtype=np.int)
         where_found = np.unique(where_found)
@@ -230,4 +234,21 @@ def merge_crossing_results(**kwargs):
     res.set_array('crossings', merge)
     
     return res
+
+@calcfunction
+def merge_chern_results(**kwargs):
+    crossings = kwargs.pop('centers')
+    crossings = crossings.get_array('crossings')
+
+    cherns = []
+    for z2calcOut in kwargs.values():
+        param = z2calcOut.outputs.output_parameters
+        cherns.append(param['invariant']['Chern'])
+
+    res = {
+        'crossings':crossings,
+        'cherns':cherns
+        }
+
+    return orm.Dict(dict=res)
 
