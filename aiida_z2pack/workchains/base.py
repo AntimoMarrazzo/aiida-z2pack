@@ -162,8 +162,7 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
 
     def setup_z2pack(self):
         inputs = AttributeDict(self.exposed_inputs(Z2packCalculation, 'z2pack'))
-        if 'scf' in self.inputs:
-            inputs.pw_code = self.inputs.pw_code
+        inputs.pw_code = self.inputs.pw_code
         inputs.parent_folder = self.ctx.parent_folder
         inputs.z2pack_settings = inputs.z2pack_settings.get_dict()
 
