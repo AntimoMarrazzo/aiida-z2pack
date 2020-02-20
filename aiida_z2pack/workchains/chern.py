@@ -402,11 +402,16 @@ class Z2pack3DChernWorkChain(WorkChain):
             'structure', valid_type=orm.StructureData,
             help='The inputs structure.'
             )
-        # spec.input(
-        #     'parent_folder', valid_type=orm.RemoteData,
-        #     required=False,
-        #     help='The output of a previous scf calculation to be used by z2pack.'
-        #     )
+        spec.input(
+            'crossings', valid_type=orm.ArrayData,
+            required=False,
+            help='Skip the FindCrossing and use the result of a previously run workchain.'
+            )
+        spec.input(
+            'scf_parent_folder', valid_type=orm.RemoteData,
+            required=False,
+            help='The remote_folder of an scf calculation to be used by z2pack.'
+            )
         spec.input(
             'clean_workdir', valid_type=orm.Bool,
             default=orm.Bool(False),
@@ -417,12 +422,13 @@ class Z2pack3DChernWorkChain(WorkChain):
             FindCrossingsWorkChain, namespace='find',
             exclude=('clean_workdir', 'structure', 'code'),
             namespace_options={
+                'required':False, 'populate_defaults':False,
                 'help': 'Inputs for the `FindCrossingsWorkChain`.'
                 }
             )
         spec.expose_inputs(
             Z2packBaseWorkChain, namespace='z2pack',
-            exclude=('clean_workdir', 'structure', 'scf', 'parent_folder'),
+            exclude=('clean_workdir', 'structure', 'parent_folder', 'pw_code'),
             namespace_options={
                 'help': 'Inputs for the `FindCrossingsWorkChain`.'
                 }
@@ -431,10 +437,14 @@ class Z2pack3DChernWorkChain(WorkChain):
         # OUTLINE ############################################################################
         spec.outline(
             cls.setup,
+            cls.validate_crossings,
             if_(cls.should_do_find_crossings)(
                 cls.run_find_crossings,
                 cls.inspect_find_crossings,
-            ),
+            ).else_(
+                cls.set_crossings_from_input
+                ),
+            cls.prepare_z2pack,
             cls.run_z2pack,
             cls.inspect_z2pack,
             cls.results
@@ -445,25 +455,48 @@ class Z2pack3DChernWorkChain(WorkChain):
             'output_parameters', valid_type=orm.Dict,
             help='Dict resulting from a z2pack calculation.'
             )
-        # spec.expose_outputs(Z2packCalculation)
+        spec.expose_outputs(
+            FindCrossingsWorkChain, namespace='find',
+            exclude=('scf_remote_folder', ),
+            namespace_options={
+                'required':False, 'populate_defaults': False,
+                'help': 'Outputs for the `FindCrossingsWorkChain`.'
+                }
+            )
 
         # ERRORS ############################################################################
         spec.exit_code(113, 'ERROR_SUB_PROCESS_FAILED_FINDCROSSING',
             message='the FindCrossingsWorkChain sub process failed')
         spec.exit_code(123, 'ERROR_SUB_PROCESS_FAILED_Z2PACK',
             message='the Z2packBaseWorkChain sub process failed')
+        spec.exit_code(133, 'ERROR_INVALID_INPUT_CROSSINGS',
+            message='Must provide either `find` namelist or `crossings` ArrayData as input.')
+        spec.exit_code(143, 'ERROR_INVALID_INPUT_SCF_Z2PACK',
+            message='If `crossings` is given, must also specify `scf_parent_folder` or `z2pack.scf`.')
 
     def setup(self):
         """Define the current structure in the context to be the input structure."""
         self.ctx.current_structure = self.inputs.structure
+
+    def validate_crossings(self):
+        """Check validity of crossings input"""
+        if all([key not in self.inputs for key in ['find', 'crossings']]):
+            return self.exit_codes.ERROR_INVALID_INPUT_CROSSINGS
         
     def should_do_find_crossings(self):
-        # """If the 'findc' input namespace was specified, we try to find band crossings."""
-        return 'find' in self.input_namespace
+        """If the 'find' input namespace was specified and `crossings` is not set, then try to find band crossings."""
+        return not 'crossings' in self.inputs and 'find' in self.inputs
+
+    def set_crossings_from_input(self):
+        """Set crossings from given input. Ignore `find` namelist."""
+        if 'find' in self.inputs:
+            self.report('Both `crossings` and `find` provided as input. Ignoring `find`.')
+        self.report('Taking crossings<{}> from input.'.format(self.inputs.crossings.pk))
+        self.ctx.crossings = self.inputs.crossings.get_array('crossings')
 
     def run_find_crossings(self):
         # """Run the FindCrossingsWorkChain to find bands crossings."""
-        inputs = AttributeDict(self.exposed_inputs(FindCrossingsWorkChain, namespace='findc'))
+        inputs = AttributeDict(self.exposed_inputs(FindCrossingsWorkChain, namespace='find'))
         inputs.structure = self.ctx.current_structure
         inputs.code = self.inputs.pw_code
 
@@ -484,19 +517,36 @@ class Z2pack3DChernWorkChain(WorkChain):
         self.ctx.crossings  = workchain.outputs.crossings.get_array('crossings')
         self.ctx.remote_scf = workchain.outputs.scf_remote_folder
 
-    def run_z2pack(self):
-        inputs = AttributeDict(self.exposed_inputs(Z2packBaseWorkChain, namespace='z2pack'))
-        inputs.structure = self.ctx.current_structure
-        inputs.parent_folder = self.ctx.remote_scf
-        inputs.pw_code = self.inputs.pw_code
+        self.out_many(
+            self.exposed_outputs(
+                workchain,
+                FindCrossingsWorkChain,
+            )
+        )
 
-        for c in self.ctx.centers:
-            inputs.z2pack.z2pack_settings.update({
+    def prepare_z2pack(self):
+        self.ctx.inputs = AttributeDict(self.exposed_inputs(Z2packBaseWorkChain, namespace='z2pack'))
+        self.ctx.inputs.pw_code   = self.inputs.pw_code
+        self.ctx.inputs.structure = self.ctx.current_structure
+
+        if 'remote_scf' in self.ctx:
+            self.ctx.inputs.parent_folder = self.ctx.remote_scf
+        else:
+            if not 'scf' in self.ctx.inputs.z2pack and not 'scf_parent_folder' in self.inputs:
+                return self.exit_codes.ERROR_INVALID_INPUT_SCF_Z2PACK
+            if 'scf_parent_folder' in self.inputs:
+                self.ctx.inputs.parent_folder = self.inputs.scf_parent_folder
+
+    def run_z2pack(self):
+        old = self.ctx.inputs.z2pack.z2pack_settings.get_dict()
+        for c in self.ctx.crossings:
+            old.update({
                 'dimension_mode':'3D',
                 'invariant':'Chern',
                 'surface':'z2pack.shape.Sphere(center=({0[0]:11.7f}, {0[1]:11.7f}, {0[1]:11.7f}), radius=0.010)'.format(c)
                 })
-            running = self.submit(Z2packBaseWorkChain, **inputs)
+            self.ctx.inputs.z2pack.z2pack_settings = orm.Dict(dict=old)
+            running = self.submit(Z2packBaseWorkChain, **self.ctx.inputs)
 
             self.report('launching Z2packBaseWorkChain<{}> on center {}'.format(running.pk, c))
 

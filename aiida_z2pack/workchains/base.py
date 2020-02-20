@@ -29,6 +29,7 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
             PwBaseWorkChain, namespace='scf',
             exclude=('clean_workdir', 'pw.structure', 'pw.code'),
             namespace_options={
+                'required':False, 'populate_defaults':False,
                 'help': 'Inputs for the `PwBaseWorkChain` for the SCF calculation.'
                 }
             )
@@ -185,7 +186,7 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
 
     def _autoset_wannier90_paremters(self):
         self.report("Required w90 parameters are missing. Guessing them from the output of the scf calculation.")
-        pw_params = self.ctx.workchain_scf.outputs.output_parameters.get_dict()
+        pw_params = self.ctx.parent_folder.creator.outputs.output_parameters.get_dict()
         n_bnd     = pw_params['number_of_bands']
         n_el      = pw_params['number_of_electrons']
         spin      = pw_params['spin_orbit_calculation']
