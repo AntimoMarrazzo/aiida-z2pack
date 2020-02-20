@@ -139,6 +139,10 @@ class FindCrossingsWorkChain(WorkChain):
             required=False,
             help='The remote folder produced by the scf calculation.'
             )
+        spec.output('output_structure', valid_type=orm.StructureData,
+            required=False,
+            help='The structure produced by the relax calculation.'
+            )
 
         # ERRORS ############################################################################
         spec.exit_code(112, 'ERROR_SUB_PROCESS_FAILED_RELAX',
@@ -188,6 +192,8 @@ class FindCrossingsWorkChain(WorkChain):
             return self.exit_codes.ERROR_SUB_PROCESS_FAILED_RELAX
 
         self.ctx.current_structure = workchain.outputs.output_structure
+
+        self.out('output_structure', self.ctx.current_structure)
 
     def should_do_scf(self):
         return not 'parent_folder' in self.inputs
@@ -359,6 +365,7 @@ class FindCrossingsWorkChain(WorkChain):
         calculation = self.ctx.workchain_nscf[self.ctx.iteration - 1]
 
         found = merge_crossing_results(
+            structure=self.ctx.current_structure,
             **{'found_{}'.format(n):array for n,array in enumerate(self.ctx.found_crossings)}
             )
 
