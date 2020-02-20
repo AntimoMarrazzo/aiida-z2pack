@@ -545,7 +545,8 @@ class Z2pack3DChernWorkChain(WorkChain):
                 'invariant':'Chern',
                 'surface':'z2pack.shape.Sphere(center=({0[0]:11.7f}, {0[1]:11.7f}, {0[1]:11.7f}), radius=0.010)'.format(c)
                 })
-            self.ctx.inputs.z2pack.z2pack_settings = orm.Dict(dict=old)
+            self.ctx.inputs.z2pack.z2pack_settings = orm.Dict(dict=old
+                )
             running = self.submit(Z2packBaseWorkChain, **self.ctx.inputs)
 
             self.report('launching Z2packBaseWorkChain<{}> on center {}'.format(running.pk, c))

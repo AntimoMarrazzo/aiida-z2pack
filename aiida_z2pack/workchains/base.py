@@ -90,6 +90,11 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
             )
 
         spec.expose_outputs(Z2packCalculation)
+        spec.output(
+            'wannier90_parameters', valid_type=orm.Dict,
+            required=False,
+            help='Auto-setted w90parameters.'
+            )
         spec.exit_code(101, 'ERROR_UNRECOVERABLE_FAILURE', message='Can\'t recover. Aborting!')
         spec.exit_code(111, 'ERROR_SUB_PROCESS_FAILED_STARTING_SCF',
             message='the starting scf PwBaseWorkChain sub process failed')
@@ -203,7 +208,11 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
         w90_params['num_bands'] = n_el
         w90_params['exclude_bands'] = [*range(n_el+1, n_bnd+1)]
 
-        return w90_params
+        res = orm.Dict(dict=w90_params)
+
+        self.out('wannier90_parameters', res)
+
+        return res
 
     def _handle_calculation_sanity_checks(self, calculation):
         """Check if the calculation fnished but did not reach convergence."""
