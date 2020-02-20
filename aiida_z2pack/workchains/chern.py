@@ -445,8 +445,15 @@ class Z2pack3DChernWorkChain(WorkChain):
                 cls.set_crossings_from_input
                 ),
             cls.prepare_z2pack,
-            cls.run_z2pack,
-            cls.inspect_z2pack,
+            if_(cls.should_do_alltogheter)(
+                cls.run_z2pack_all,
+                cls.inspect_z2pack_all
+            ).else_(
+                while_(cls.do_z2pack_one)(
+                    cls.run_z2pack_one,
+                    cls.inspect_z2pack_one,
+                    ),
+                ),
             cls.results
             )
 
@@ -537,28 +544,71 @@ class Z2pack3DChernWorkChain(WorkChain):
             if 'scf_parent_folder' in self.inputs:
                 self.ctx.inputs.parent_folder = self.inputs.scf_parent_folder
 
-    def run_z2pack(self):
+        self.ctx.iteration = 0
+        self.ctx.max_iteration = len(self.ctx.crossings)
+
+    def should_do_alltogheter(self):
+        from aiida.schedulers.plugins.direct import DirectScheduler
+
+        computer  = self.inputs.pw_code.computer
+        scheduler = computer.get_scheduler()
+
+        return not isinstance(scheduler, DirectScheduler)
+
+    def run_z2pack_all(self):
+        cross = self.ctx.crossings[self.ctx.iteration]
+        self.ctx.iteration += 1
+
         old = self.ctx.inputs.z2pack.z2pack_settings.get_dict()
-        for c in self.ctx.crossings:
+        for cross in self.ctx.crossings:
             old.update({
                 'dimension_mode':'3D',
                 'invariant':'Chern',
-                'surface':'z2pack.shape.Sphere(center=({0[0]:11.7f}, {0[1]:11.7f}, {0[1]:11.7f}), radius=0.010)'.format(c)
+                'surface':'z2pack.shape.Sphere(center=({0[0]:11.7f}, {0[1]:11.7f}, {0[1]:11.7f}), radius=0.010)'.format(cross)
                 })
-            self.ctx.inputs.z2pack.z2pack_settings = orm.Dict(dict=old
-                )
+            self.ctx.inputs.z2pack.z2pack_settings = orm.Dict(dict=old)
+
             running = self.submit(Z2packBaseWorkChain, **self.ctx.inputs)
 
-            self.report('launching Z2packBaseWorkChain<{}> on center {}'.format(running.pk, c))
+            self.report('launching Z2packBaseWorkChain<{}> on center {}'.format(running.pk, cross))
 
             self.to_context(workchain_z2pack=append_(running))
 
-    def inspect_z2pack(self):
-        # """Verify that the FindCrossingsWorkChain finished successfully."""
+    def inspect_z2pack_all(self):
+        """Verify that the FindCrossingsWorkChain finished successfully."""
         for workchain in self.ctx.workchain_z2pack:
             if not workchain.is_finished_ok:
                 self.report('Z2packBaseWorkChain failed with exit status {}'.format(workchain.exit_status))
                 return self.exit_codes.ERROR_SUB_PROCESS_FAILED_Z2PACK
+
+    def do_z2pack_one(self):
+        return self.ctx.iteration < self.ctx.max_iteration
+
+    def run_z2pack_one(self):
+        cross = self.ctx.crossings[self.ctx.iteration]
+        self.ctx.iteration += 1
+
+        old = self.ctx.inputs.z2pack.z2pack_settings.get_dict()
+        old.update({
+            'dimension_mode':'3D',
+            'invariant':'Chern',
+            'surface':'z2pack.shape.Sphere(center=({0[0]:11.7f}, {0[1]:11.7f}, {0[1]:11.7f}), radius=0.010)'.format(cross)
+            })
+        self.ctx.inputs.z2pack.z2pack_settings = orm.Dict(dict=old)
+
+        running = self.submit(Z2packBaseWorkChain, **self.ctx.inputs)
+
+        self.report('launching Z2packBaseWorkChain<{}> on center {}'.format(running.pk, cross))
+
+        return ToContext(workchain_z2pack=append_(running))
+
+    def inspect_z2pack_one(self):
+        """Verify that the FindCrossingsWorkChain finished successfully."""
+        workchain = self.ctx.workchain_z2pack[-1]
+
+        if not workchain.is_finished_ok:
+            self.report('Z2packBaseWorkChain failed with exit status {}'.format(workchain.exit_status))
+            return self.exit_codes.ERROR_SUB_PROCESS_FAILED_Z2PACK
 
     def results(self):
         res = merge_chern_results(
