@@ -175,7 +175,10 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
         self.ctx.inputs.z2pack_settings['min_neighbour_dist'] = self.ctx.current_MND
         if self.ctx.iteration > 0:
             previous = self.ctx.calculations[-1]
-            remote   = previous.outputs.remote_folder 
+            try:
+                remote = previous.outputs.remote_folder
+            except:
+                remote = self.ctx.parent_folder
             self.ctx.inputs.parent_folder = remote
 
     # def results(self):
