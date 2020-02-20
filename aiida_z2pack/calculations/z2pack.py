@@ -6,12 +6,13 @@ from aiida import orm
 from aiida.engine import CalcJob
 from aiida.plugins import CalculationFactory
 from aiida.common import datastructures, exceptions
-from aiida.orm.nodes.data.upf import get_pseudos_from_structure
 
 from .utils import prepare_nscf, prepare_overlap, prepare_wannier90, prepare_z2pack
 from .utils import merge_dict_input_to_root, recursive_get_linked_node
 
-PwCalculation           = CalculationFactory('quantumespresso.pw')
+from aiida_quantumespresso.calculations import _lowercase_dict
+
+PwCalculation = CalculationFactory('quantumespresso.pw')
 
 class Z2packCalculation(CalcJob):
     """
@@ -169,8 +170,6 @@ class Z2packCalculation(CalcJob):
             )
 
     def prepare_for_submission(self, folder):
-        from aiida.common.datastructures import CodeRunMode
-
         self.inputs.metadata.options.parser_name     = 'z2pack.z2pack'
         self.inputs.metadata.options.output_filename = self._OUTPUT_Z2PACK_FILE
         self.inputs.metadata.options.input_filename  = self._INPUT_Z2PACK_FILE
@@ -186,7 +185,7 @@ class Z2packCalculation(CalcJob):
         codeinfo.code_uuid   = self.inputs.code.uuid
         calcinfo.codes_info  = [codeinfo]
 
-        calcinfo.codes_run_mode = CodeRunMode.SERIAL
+        calcinfo.codes_run_mode = datastructures.CodeRunMode.SERIAL
         calcinfo.cmdline_params = []
 
         calcinfo.retrieve_list           = []
@@ -217,7 +216,10 @@ class Z2packCalculation(CalcJob):
         uuid   = parent.computer.uuid
         parent_type = parent.creator.process_class
 
-        self.restart_mode = False
+        settings = _lowercase_dict(self.inputs.z2pack_settings.get_dict(), 'z2pack_settings')
+        symlink  = settings.get('parent_folder_symlink', False)
+        self.restart_mode = settings.get('restart_mode', True)
+        ptr = calcinfo.remote_symlink_list if symlink else calcinfo.remote_copy_list
         if parent_type == PwCalculation:
             self._set_inputs_from_parent_scf()
 
@@ -228,8 +230,7 @@ class Z2packCalculation(CalcJob):
         elif parent_type == Z2packCalculation:
             self._set_inputs_from_parent_z2pack()
 
-            settings = self.inputs.z2pack_settings.get_dict()
-            self.restart_mode = settings.get('restart_mode', True)
+            ptr = calcinfo.remote_symlink_list if symlink else calcinfo.remote_copy_list
             if self.restart_mode:
                 calcinfo.remote_copy_list.append(
                     (
@@ -247,7 +248,7 @@ class Z2packCalculation(CalcJob):
                 )
 
         parent_files = [self._PSEUDO_SUBFOLDER, self._OUTPUT_SUBFOLDER]
-        calcinfo.remote_copy_list.extend(
+        ptr.extend(
             [(uuid, os.path.join(rpath, fname), fname) for fname in parent_files]
             )
 
