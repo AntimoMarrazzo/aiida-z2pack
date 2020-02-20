@@ -5,15 +5,15 @@ def prepare_z2pack(cls, folder):
     input_filename = folder.get_abs_path(cls._INPUT_Z2PACK_FILE)
     try:
         pw_code = cls.inputs.pw_code
-    except KeyError:
+    except AttributeError:
         raise exceptions.InputValidationError("No nscf code specified for this calculation")
     try:
         overlap_code = cls.inputs.overlap_code
-    except KeyError:
+    except AttributeError:
         raise exceptions.InputValidationError("No overlap code specified for this calculation")
     try:
         wannier90_code = cls.inputs.wannier90_code
-    except KeyError:
+    except AttributeError:
         raise exceptions.InputValidationError("No Wannier90 code specified for this calculation")
     
     try:
