@@ -21,7 +21,12 @@
     },
     "install_requires": [
         "numpy",
-        "z2pack"
+        "scipy",
+        "sklearn",
+        "z2pack",
+        "aiida",
+        "aiida_quantumespresso",
+        "aiida_wannier90"
     ],
     "extras_require": {
         "dev": [
