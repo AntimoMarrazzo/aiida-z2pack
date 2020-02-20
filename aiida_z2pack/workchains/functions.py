@@ -1,6 +1,7 @@
 import numpy as np
 from itertools import product
 from scipy.spatial import KDTree
+from sklearn.cluster import AgglomerativeClustering
 
 from aiida import orm
 from aiida.engine import calcfunction
@@ -120,14 +121,9 @@ def get_crossing_and_lowgap_points(bands_data, gap_threshold):
 
     calculation = bands_data.creator
     gaps = get_gap_array_from_PwCalc(calculation)
-    # kpoints = bands_data.get_kpoints()
     kpt_cryst = bands_data.get_kpoints()
     kpt_cart  = bands_data.get_kpoints(cartesian=True)
-    # cell = bands_data.cell
-    
-    # recipr  = recipr_base(cell)
-    # kpt_c   = np.dot(kpoints, recipr)
-    gap_thr = gap_threshold.value
+    gap_thr   = gap_threshold.value
 
     try:
         kki = calculation.inputs.kpoints.creator.inputs
@@ -141,6 +137,10 @@ def get_crossing_and_lowgap_points(bands_data, gap_threshold):
     kpt_tree = KDTree(kpt_cart)
     query    = centers.query_ball_tree(kpt_tree, r=dist*1.74/2) #~sqrt(3) / 2
 
+    # Limiting fermi velocity to ~ v_f[graphene] * 3
+    pinned_thr = dist * 3.75
+
+    # Limiting number of new points per lowgap center based on distance between points
     lim = max(-5 // np.log10(dist), 1)  if dist < 1 else 200
     if dist < 0.01:
         lim = 1
@@ -156,6 +156,7 @@ def get_crossing_and_lowgap_points(bands_data, gap_threshold):
         prev_min_gap = gaps[i]
         min_gap = gaps[q].min()
 
+        # Skipping points where the gap didn't move much between iterations
         if min_gap / prev_min_gap > 0.9 and dist < 0.05:
             continue
 
@@ -165,8 +166,9 @@ def get_crossing_and_lowgap_points(bands_data, gap_threshold):
             app = np.where(gaps[q] < min_gap * scale)[0]
             scale *= 0.95
         where_found.extend([q[i] for i in app if gaps[q[i]] <= gap_thr])
-        where_pinned.extend([q[i] for i in app if gaps[q[i]] > gap_thr])
+        where_pinned.extend([q[i] for i in app if gap_thr < gaps[q[i]] < pinned_thr])
 
+    # Removing dupicates and avoid exception for empty list
     where_pinned = np.array(where_pinned, dtype=np.int)
     where_pinned = np.unique(where_pinned)
     where_found = np.array(where_found, dtype=np.int)
@@ -210,6 +212,10 @@ def get_kpoint_grid_dimensionality(kpt_data):
 
 @calcfunction
 def merge_crossing_results(**kwargs):
+    structure = kwargs.pop('structure')
+    cell      = structure.cell
+    recipr    = recipr_base(cell)
+
     merge = np.empty((0,3))
     for array in kwargs.values():
         found = array.get_array('found')
@@ -218,8 +224,20 @@ def merge_crossing_results(**kwargs):
     if len(merge):
         merge = np.unique(merge, axis=0)
 
+        merge_cart = np.dot(merge, recipr)
+
+        aggl = AgglomerativeClustering(n_clusters=None, distance_threshold=0.005, linkage='average')
+        res  = aggl.fit(merge_cart)
+
+        new = []
+        for n in np.unique(res.labels_):
+            w = np.where(res.labels_ == n)[0]
+            new.append(np.average(merge[w], axis=0))
+
+        new = np.array(new)
+
     res = orm.ArrayData()
-    res.set_array('crossings', merge)
+    res.set_array('crossings', new)
     
     return res
 
