@@ -10,7 +10,6 @@
   ecutwfc =   3.0000000000d+01
   ibrav = 0
   nat = 2
-  nbnd = 50
   nosym = .true.
   ntyp = 1
 /
