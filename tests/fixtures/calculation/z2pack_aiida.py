@@ -34,6 +34,7 @@ result = z2pack.surface.run(
     min_neighbour_dist = 0.01,
     iterator           = range(8, 41, 2),
     save_file          = 'save.json',
+    load               = True
     )
 Chern = z2pack.invariant.chern(result)
 res_dict['invariant'].update({'Chern':Chern})

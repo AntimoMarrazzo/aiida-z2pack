@@ -216,21 +216,24 @@ class Z2packCalculation(CalcJob):
         uuid   = parent.computer.uuid
         parent_type = parent.creator.process_class
 
-        settings = _lowercase_dict(self.inputs.z2pack_settings.get_dict(), 'z2pack_settings')
+        if parent_type == Z2packCalculation:
+            self._set_inputs_from_parent_z2pack()
+
+        try:
+            settings = _lowercase_dict(self.inputs.z2pack_settings.get_dict(), 'z2pack_settings')
+        except AttributeError:
+            raise exceptions.InputValidationError('Must provide `z2pack_settings` input for `scf` calculation.')
         symlink  = settings.get('parent_folder_symlink', False)
         self.restart_mode = settings.get('restart_mode', True)
         ptr = calcinfo.remote_symlink_list if symlink else calcinfo.remote_copy_list
+
         if parent_type == PwCalculation:
             self._set_inputs_from_parent_scf()
 
             prepare_nscf(self, folder)
             prepare_overlap(self, folder)
             prepare_wannier90(self, folder)
-
         elif parent_type == Z2packCalculation:
-            self._set_inputs_from_parent_z2pack()
-
-            ptr = calcinfo.remote_symlink_list if symlink else calcinfo.remote_copy_list
             if self.restart_mode:
                 calcinfo.remote_copy_list.append(
                     (

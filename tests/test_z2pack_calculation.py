@@ -72,11 +72,19 @@ def test_z2pack_inputs(
     inputs   = ['aiida.nscf.in', 'aiida.pw2wan.in', 'aiida.win', 'z2pack_aiida.py']
     outputs  = ['z2pack_aiida.out', 'save.json', 'results.json']
     errors   = ['build/aiida.werr', 'build/CRASH']
+    remotes  = ['./out/', './pseudo/']
 
     cmdline_params = []
     local_copy_list = []
     retrieve_list = outputs + errors
     retrieve_temporary_list = []
+    remote_copy_list = [
+        (
+            remote.computer.uuid, 
+            os.path.join(remote.get_remote_path(), path),
+            path
+        ) for path in remotes
+        ]
 
     # Check the attributes of the returned `CalcInfo`
     assert isinstance(calc_info, datastructures.CalcInfo)
@@ -85,6 +93,7 @@ def test_z2pack_inputs(
     assert sorted(calc_info.retrieve_list) == sorted(retrieve_list)
     assert sorted(calc_info.retrieve_temporary_list) == sorted(retrieve_temporary_list)
     assert sorted(calc_info.remote_symlink_list) == sorted([])
+    assert sorted(calc_info.remote_copy_list, key=lambda x: x[1]) == sorted(remote_copy_list, key=lambda x: x[1])
 
     # Checks on the files written to the sandbox folder as raw input
     retrieved_list = inputs
@@ -109,6 +118,65 @@ def test_z2pack_inputs(
             written_input = f.read()
 
         assert base_input == written_input
+
+def test_z2pack_symlink(
+    aiida_profile, fixture_sandbox, generate_calc_job, fixture_code, generate_structure, generate_kpoints_mesh,
+    generate_upf_data, generate_remote_data, fixture_localhost,
+    pw_parameters, z2pack_settings, tmpdir
+):
+    """Test a default `PwCalculation`."""
+    new_param = {'SYSTEM':{'nbnd':50}}
+
+    upf    = generate_upf_data('Si')
+    struct = generate_structure()
+    remote = generate_remote_data(
+        fixture_localhost, str(tmpdir),
+        'quantumespresso.pw',
+        extras_root=[
+            (pw_parameters, 'parameters'),
+            (struct, 'structure'),
+            (upf, 'pseudos__Si'),
+            ]
+        )
+    f = tmpdir.mkdir('out').mkdir('aiida.save').join('data-file-schema.xml')
+    f.write('123')
+
+    from copy import deepcopy
+    sett = deepcopy(z2pack_settings)
+    sett['parent_folder_symlink'] = True
+
+    inputs = {
+        'code': fixture_code('z2pack.z2pack'),
+        'parent_folder':remote,
+        'pw_parameters': orm.Dict(dict=new_param),
+        'z2pack_settings': orm.Dict(dict=sett),
+        'pw_code': fixture_code('quantumespresso.pw'),
+        'overlap_code': fixture_code('quantumespresso.pw2wannier90'),
+        'wannier90_code': fixture_code('wannier90.wannier90'),
+        'metadata': {
+            'options': get_default_options()
+        }
+    }
+
+    process   = generate_calc_job('z2pack.z2pack', inputs)
+    calc_info = process.prepare_for_submission(fixture_sandbox)
+
+    # inputs   = ['aiida.nscf.in', 'aiida.pw2wan.in', 'aiida.win', 'z2pack_aiida.py']
+    # outputs  = ['z2pack_aiida.out', 'save.json', 'results.json']
+    # errors   = ['build/aiida.werr', 'build/CRASH']
+    remotes  = ['./out/', './pseudo/']
+
+
+    remote_symlink_list = [
+        (
+            remote.computer.uuid, 
+            os.path.join(remote.get_remote_path(), path),
+            path
+        ) for path in remotes
+        ]
+
+    # Check the attributes of the returned `CalcInfo`
+    assert sorted(calc_info.remote_symlink_list, key=lambda x: x[1]) == sorted(remote_symlink_list, key=lambda x: x[1])
 
 def test_nested_restart(
     aiida_profile, generate_calc_job, fixture_code, fixture_sandbox, generate_structure,
