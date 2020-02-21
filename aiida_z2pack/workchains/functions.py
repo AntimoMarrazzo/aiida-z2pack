@@ -243,13 +243,12 @@ def merge_crossing_results(**kwargs):
 
 @calcfunction
 def merge_chern_results(**kwargs):
-    crossings = kwargs.pop('centers')
+    crossings = kwargs.pop('crossings')
     crossings = crossings.get_array('crossings')
 
     cherns = []
-    for z2calcOut in kwargs.values():
-        param = z2calcOut.outputs.output_parameters
-        cherns.append(param['invariant']['Chern'])
+    for param in kwargs.values():
+       cherns.append(round(param['invariant']['Chern'], ndigits=5))
 
     res = {
         'crossings':crossings,

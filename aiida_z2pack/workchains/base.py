@@ -239,6 +239,13 @@ def _handle_unrecoverable_failure(self, calculation):
         self.report_error_handled(calculation, 'unrecoverable error, aborting...')
         return ErrorHandlerReport(True, True, self.exit_codes.ERROR_UNRECOVERABLE_FAILURE)
 
+@register_error_handler(Z2packBaseWorkChain, 590)
+def _handle_failed(self, calculation):
+    try:
+        calculation.outputs.output_parameters
+    except:
+        return ErrorHandlerReport(False, True, self.exit_codes.ERROR_UNRECOVERABLE_FAILURE)
+
 @register_error_handler(Z2packBaseWorkChain, 580)
 def _handle_not_converged(self, calculation):
     # try:

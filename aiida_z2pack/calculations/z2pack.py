@@ -164,8 +164,8 @@ class Z2packCalculation(CalcJob):
         spec.exit_code(
             210, 'ERROR_MISSING_RESULTS_FILE',
             message=(
-                'The result file \'{}\' is missing. '
-                'Calculation interrupted by walltime.'.format(cls._OUTPUT_RESULT_FILE)
+                'The result file \'{}\' is missing. '.format(cls._OUTPUT_RESULT_FILE)
+                # 'Calculation interrupted by walltime.'
                 )
             )
 

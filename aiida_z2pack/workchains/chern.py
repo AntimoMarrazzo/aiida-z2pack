@@ -408,6 +408,11 @@ class Z2pack3DChernWorkChain(WorkChain):
             help='Skip the FindCrossing and use the result of a previously run workchain.'
             )
         spec.input(
+            'sphere_radius', valid_type=orm.Float,
+            default=orm.Float(0.005),
+            help='Radius for the sphere of kpoints.'
+            )
+        spec.input(
             'scf_parent_folder', valid_type=orm.RemoteData,
             required=False,
             help='The remote_folder of an scf calculation to be used by z2pack.'
@@ -484,6 +489,7 @@ class Z2pack3DChernWorkChain(WorkChain):
     def setup(self):
         """Define the current structure in the context to be the input structure."""
         self.ctx.current_structure = self.inputs.structure
+        self.ctx.radius = self.inputs.sphere_radius.value
 
     def validate_crossings(self):
         """Check validity of crossings input"""
@@ -499,6 +505,7 @@ class Z2pack3DChernWorkChain(WorkChain):
         if 'find' in self.inputs:
             self.report('Both `crossings` and `find` provided as input. Ignoring `find`.')
         self.report('Taking crossings<{}> from input.'.format(self.inputs.crossings.pk))
+        self.ctx.crossings_node = self.inputs.crossings
         self.ctx.crossings = self.inputs.crossings.get_array('crossings')
 
     def run_find_crossings(self):
@@ -521,6 +528,7 @@ class Z2pack3DChernWorkChain(WorkChain):
             self.report('FindCrossingsWorkChain failed with exit status {}'.format(workchain.exit_status))
             return self.exit_codes.ERROR_SUB_PROCESS_FAILED_FINDCROSSING
 
+        self.ctx.crossings_node = workchain.outputs.crossings
         self.ctx.crossings  = workchain.outputs.crossings.get_array('crossings')
         self.ctx.remote_scf = workchain.outputs.scf_remote_folder
 
@@ -564,7 +572,7 @@ class Z2pack3DChernWorkChain(WorkChain):
             old.update({
                 'dimension_mode':'3D',
                 'invariant':'Chern',
-                'surface':'z2pack.shape.Sphere(center=({0[0]:11.7f}, {0[1]:11.7f}, {0[1]:11.7f}), radius=0.010)'.format(cross)
+                'surface':'z2pack.shape.Sphere(center=({0[0]:11.7f}, {0[1]:11.7f}, {0[1]:11.7f}), radius={1})'.format(cross, self.ctx.radius)
                 })
             self.ctx.inputs.z2pack.z2pack_settings = orm.Dict(dict=old)
 
@@ -592,7 +600,7 @@ class Z2pack3DChernWorkChain(WorkChain):
         old.update({
             'dimension_mode':'3D',
             'invariant':'Chern',
-            'surface':'z2pack.shape.Sphere(center=({0[0]:11.7f}, {0[1]:11.7f}, {0[1]:11.7f}), radius=0.010)'.format(cross)
+            'surface':'z2pack.shape.Sphere(center=({0[0]:11.7f}, {0[1]:11.7f}, {0[1]:11.7f}), radius={1})'.format(cross, self.ctx.radius)
             })
         self.ctx.inputs.z2pack.z2pack_settings = orm.Dict(dict=old)
 
@@ -612,8 +620,8 @@ class Z2pack3DChernWorkChain(WorkChain):
 
     def results(self):
         res = merge_chern_results(
-            crossings=self.ctx.workchain_find.outputs.crossings,
-            **{'z2calcOut_{}'.format(n):calc.output_parameters for n,calc in enumerate(self.ctx.workchain_z2pack)}
+            crossings=self.ctx.crossings_node,
+            **{'z2calcOut_{}'.format(n):calc.outputs.output_parameters for n,calc in enumerate(self.ctx.workchain_z2pack)}
             )
         
         self.out('output_parameters', res)
