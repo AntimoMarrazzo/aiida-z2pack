@@ -61,6 +61,7 @@ class FindCrossingsWorkChain(WorkChain):
             PwBaseWorkChain, namespace='scf',
             exclude=('clean_workdir', 'pw.structure', 'pw.code', 'pw.pseudos'),
             namespace_options={
+                'required': False, 'populate_defaults': False,
                 'help': 'Inputs for the `PwBaseWorkChain` for the SCF calculation.'
                 }
             )
@@ -242,9 +243,9 @@ class FindCrossingsWorkChain(WorkChain):
         else:
             self.ctx.inputs = AttributeDict(self.exposed_inputs(PwBaseWorkChain, namespace='scf'))
 
-            self.ctx.inputs.pw.parameters = self.ctx.inputs.pw.parameters.get_dict()
-            self.ctx.inputs.pw.parameters.setdefault('CONTROL', {})
-            self.ctx.inputs.pw.parameters['CONTROL']['calculation'] = 'nscf'
+        self.ctx.inputs.pw.parameters = self.ctx.inputs.pw.parameters.get_dict()
+        self.ctx.inputs.pw.parameters.setdefault('CONTROL', {})
+        self.ctx.inputs.pw.parameters['CONTROL']['calculation'] = 'nscf'
             
         self.ctx.inputs.pw.parent_folder = self.ctx.scf_folder
         self.ctx.inputs.clean_workdir = self.inputs.clean_workdir
