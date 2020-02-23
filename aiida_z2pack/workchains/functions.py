@@ -221,6 +221,7 @@ def merge_crossing_results(**kwargs):
         found = array.get_array('found')
         merge = np.vstack((merge, found))
 
+    new = []
     if len(merge):
         merge = np.unique(merge, axis=0)
 
@@ -229,12 +230,11 @@ def merge_crossing_results(**kwargs):
         aggl = AgglomerativeClustering(n_clusters=None, distance_threshold=0.005, linkage='average')
         res  = aggl.fit(merge_cart)
 
-        new = []
         for n in np.unique(res.labels_):
             w = np.where(res.labels_ == n)[0]
             new.append(np.average(merge[w], axis=0))
 
-        new = np.array(new)
+    new = np.array(new)
 
     res = orm.ArrayData()
     res.set_array('crossings', new)
