@@ -19,7 +19,7 @@ Z2packBaseWorkChain = WorkflowFactory('z2pack.base')
 
 class FindCrossingsWorkChain(WorkChain):
     """Workchain to find bands crossing in the Brillouin Zone using
-    a series of quantum espresso nscf calculations."""
+    a series of quantum espresso bands calculations."""
 
     @classmethod
     def define(cls, spec):
@@ -66,11 +66,11 @@ class FindCrossingsWorkChain(WorkChain):
                 }
             )
         spec.expose_inputs(
-            PwBaseWorkChain, namespace='nscf',
+            PwBaseWorkChain, namespace='bands',
             exclude=('clean_workdir', 'pw.structure', 'pw.code', 'pw.pseudos', 'kpoints'),
             namespace_options={
                 'required': False, 'populate_defaults': False,
-                'help': 'Inputs for the `PwBaseWorkChain` for the NSCF calculation.'
+                'help': 'Inputs for the `PwBaseWorkChain` for the BANDS calculation.'
                 }
             )
 
@@ -113,18 +113,18 @@ class FindCrossingsWorkChain(WorkChain):
             ).else_(
                 cls.set_remote_scf
                 ),
-            cls.setup_nscf_loop,
-            if_(cls.should_do_first_nscf)(
-                cls.first_nscf_step,
-                cls.inspect_nscf,
+            cls.setup_bands_loop,
+            if_(cls.should_do_first_bands)(
+                cls.first_bands_step,
+                cls.inspect_bands,
             ).else_(
                 cls.start_from_scf
                 ),
             cls.analyze_bands,
             while_(cls.should_find_zero_gap)(
                 cls.setup_grid,
-                cls.run_nscf,
-                cls.inspect_nscf,
+                cls.run_bands,
+                cls.inspect_bands,
                 cls.analyze_bands,
                 cls.stepper
                 ),
@@ -150,8 +150,8 @@ class FindCrossingsWorkChain(WorkChain):
             message='the relax PwRelaxWorkChain sub process failed')
         spec.exit_code(122, 'ERROR_SUB_PROCESS_FAILED_SCF',
             message='the scf PwBaseWorkChain sub process failed')
-        spec.exit_code(132, 'ERROR_SUB_PROCESS_FAILED_NSCF',
-            message='the nscf PwBaseWorkChain sub process failed')
+        spec.exit_code(132, 'ERROR_SUB_PROCESS_FAILED_BANDS',
+            message='the bands PwBaseWorkChain sub process failed')
         spec.exit_code(142, 'ERROR_CANT_PINPOINT_LOWGAP_ZONE',
             message='After two iterations, no points with low_gap found. Aborting calculation!')
         spec.exit_code(152, 'ERROR_MINIMUM_DISTANCE_RAECHED',
@@ -235,17 +235,17 @@ class FindCrossingsWorkChain(WorkChain):
 
         self.out('scf_remote_folder', self.ctx.scf_folder)
 
-    def setup_nscf_loop(self):
+    def setup_bands_loop(self):
         self.ctx.iteration = 0
         # self.ctx.max_iteration = self.inputs.max_iter
-        if 'nscf' in self.inputs:
-            inputs = AttributeDict(self.exposed_inputs(PwBaseWorkChain, namespace='nscf'))
+        if 'bands' in self.inputs:
+            inputs = AttributeDict(self.exposed_inputs(PwBaseWorkChain, namespace='bands'))
         else:
             inputs = AttributeDict(self.exposed_inputs(PwBaseWorkChain, namespace='scf'))
 
         inputs.pw.parameters = inputs.pw.parameters.get_dict()
         inputs.pw.parameters.setdefault('CONTROL', {})
-        inputs.pw.parameters['CONTROL']['calculation'] = 'nscf'
+        inputs.pw.parameters['CONTROL']['calculation'] = 'bands'
         
         inputs.pw.parent_folder = self.ctx.scf_folder
         inputs.clean_workdir = self.inputs.clean_workdir
@@ -272,15 +272,15 @@ class FindCrossingsWorkChain(WorkChain):
 
         self.report('Starting loop to find bands crossings.')
 
-    def should_do_first_nscf(self):
-        """Determine if the first nscf should be run using starting_kpoints"""
+    def should_do_first_bands(self):
+        """Determine if the first bands should be run using starting_kpoints"""
         return 'starting_kpoints' in self.inputs
 
     def start_from_scf(self):
         self.report('No `starting_kpoints` provided. Using BandsData from `scf` calculation...')
         self.ctx.bands = self.ctx.workchain_scf.outputs.output_band
 
-    def first_nscf_step(self):
+    def first_bands_step(self):
         self.ctx.iteration += 1
         inputs = self.ctx.inputs
         inputs.kpoints = self.inputs.starting_kpoints
@@ -289,10 +289,10 @@ class FindCrossingsWorkChain(WorkChain):
         running = self.submit(PwBaseWorkChain, **inputs)
 
         self.report('launching PwBaseWorkChain<{}> in {} mode, iteration {}'.format(
-            running.pk, 'nscf', self.ctx.iteration
+            running.pk, 'bands', self.ctx.iteration
             ))
 
-        return ToContext(workchain_nscf=append_(running))
+        return ToContext(workchain_bands=append_(running))
 
     def should_find_zero_gap(self):
         """Limit iterations over kpoints meshes."""
@@ -304,7 +304,7 @@ class FindCrossingsWorkChain(WorkChain):
             self.ctx.current_structure, self.ctx.found_crossings[-1], distance, self.ctx.dim
             )
 
-    def run_nscf(self):
+    def run_bands(self):
         self.ctx.iteration += 1
         inputs = self.ctx.inputs
         inputs.kpoints = self.ctx.current_kpoints
@@ -313,18 +313,18 @@ class FindCrossingsWorkChain(WorkChain):
         running = self.submit(PwBaseWorkChain, **inputs)
 
         self.report('launching PwBaseWorkChain<{}> in {} mode, iteration {}'.format(
-            running.pk, 'nscf', self.ctx.iteration
+            running.pk, 'bands', self.ctx.iteration
             ))
 
-        return ToContext(workchain_nscf=append_(running))
+        return ToContext(workchain_bands=append_(running))
     
-    def inspect_nscf(self):
-        """Verify that the PwBaseWorkChain for the nscf run finished successfully."""
-        workchain = self.ctx.workchain_nscf[self.ctx.iteration - 1]
+    def inspect_bands(self):
+        """Verify that the PwBaseWorkChain for the bands run finished successfully."""
+        workchain = self.ctx.workchain_bands[self.ctx.iteration - 1]
 
         if not workchain.is_finished_ok:
             self.report('scf PwBaseWorkChain failed with exit status {}'.format(workchain.exit_status))
-            return self.exit_codes.ERROR_SUB_PROCESS_FAILED_NSCF
+            return self.exit_codes.ERROR_SUB_PROCESS_FAILED_BANDS
 
         self.ctx.bands = workchain.outputs.output_band
 
@@ -332,7 +332,7 @@ class FindCrossingsWorkChain(WorkChain):
         """Extract kpoints with gap lower than the gap threshold"""
         bands = self.ctx.bands
 
-        self.report('Analyzing nscf results for BandsData<{}>'.format(bands.pk))
+        self.report('Analyzing bands results for BandsData<{}>'.format(bands.pk))
         res = get_crossing_and_lowgap_points(
             bands, self.inputs.gap_threshold
             )
@@ -365,7 +365,7 @@ class FindCrossingsWorkChain(WorkChain):
             self.report('Kpoints distance reduced to `{}`'.format(self.ctx.current_kpoints_distance))
 
     def results(self):
-        calculation = self.ctx.workchain_nscf[self.ctx.iteration - 1]
+        calculation = self.ctx.workchain_bands[self.ctx.iteration - 1]
 
         found = merge_crossing_results(
             structure=self.ctx.current_structure,
@@ -491,6 +491,7 @@ class Z2pack3DChernWorkChain(WorkChain):
 
     def setup(self):
         """Define the current structure in the context to be the input structure."""
+        self.report('STARTING Z2pack3DChernWorkChain')
         self.ctx.current_structure = self.inputs.structure
         self.ctx.radius = self.inputs.sphere_radius.value
 
@@ -505,6 +506,7 @@ class Z2pack3DChernWorkChain(WorkChain):
 
     def set_crossings_from_input(self):
         """Set crossings from given input. Ignore `find` namelist."""
+        self.report('Setting `crossings` from input.')
         if 'find' in self.inputs:
             self.report('Both `crossings` and `find` provided as input. Ignoring `find`.')
         self.report('Taking crossings<{}> from input.'.format(self.inputs.crossings.pk))
@@ -550,11 +552,14 @@ class Z2pack3DChernWorkChain(WorkChain):
         self.ctx.inputs.structure = self.ctx.current_structure
 
         if 'remote_scf' in self.ctx:
+            # self.report('Setting scf remote_data from `FindCrossingsWorkChain` output.')
             self.ctx.inputs.parent_folder = self.ctx.remote_scf
         else:
             if not 'scf' in self.ctx.inputs.z2pack and not 'scf_parent_folder' in self.inputs:
+                self.report('Neither `scf` nor `scf_parent_folder` was specified as an input. Aborting...')
                 return self.exit_codes.ERROR_INVALID_INPUT_SCF_Z2PACK
             if 'scf_parent_folder' in self.inputs:
+                # self.report('Setting scf remote_data from inputs.')
                 self.ctx.inputs.parent_folder = self.inputs.scf_parent_folder
 
         self.ctx.iteration = 0
