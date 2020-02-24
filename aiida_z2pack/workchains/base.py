@@ -137,10 +137,6 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
         self.report('launching PwBaseWorkChain<{}> for starting scf'.format(running.pk))
 
         return ToContext(workchain_scf=running)
-        # from aiida.orm.utils import load_node
-        # self.ctx.workchain_scf = load_node(5886)
-        # self.ctx.workchain_scf = AttributeDict()
-        # self.ctx.workchain_scf.is_finished_ok = True
 
     def inspect_scf(self):
         """Inspect the result of the starting scf `PwBaseWorkChain`."""

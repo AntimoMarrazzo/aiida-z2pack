@@ -139,7 +139,7 @@ def get_crossing_and_lowgap_points(bands_data, gap_threshold):
 
     # Limiting fermi velocity to ~ v_f[graphene] * 3
     # GAP ~< dK * 10 / (#PT - 1)
-    pinned_thr = dist * 3.75
+    pinned_thr = dist * 1.75
 
     # Limiting number of new points per lowgap center based on distance between points
     lim = max(-5 // np.log10(dist), 1)  if dist < 1 else 200

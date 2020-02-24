@@ -435,7 +435,7 @@ class Z2pack3DChernWorkChain(WorkChain):
                 }
             )
         spec.expose_inputs(
-            Z2packBaseWorkChain, namespace='z2pack',
+            Z2packBaseWorkChain, namespace='z2pack_base',
             exclude=('clean_workdir', 'structure', 'parent_folder', 'pw_code'),
             namespace_options={
                 'help': 'Inputs for the `FindCrossingsWorkChain`.'
@@ -547,21 +547,22 @@ class Z2pack3DChernWorkChain(WorkChain):
         )
 
     def prepare_z2pack(self):
-        self.ctx.inputs = AttributeDict(self.exposed_inputs(Z2packBaseWorkChain, namespace='z2pack'))
-        self.ctx.inputs.pw_code   = self.inputs.pw_code
-        self.ctx.inputs.structure = self.ctx.current_structure
+        inputs = AttributeDict(self.exposed_inputs(Z2packBaseWorkChain, namespace='z2pack_base'))
+        inputs.pw_code   = self.inputs.pw_code
+        inputs.structure = self.ctx.current_structure
 
         if 'remote_scf' in self.ctx:
             # self.report('Setting scf remote_data from `FindCrossingsWorkChain` output.')
-            self.ctx.inputs.parent_folder = self.ctx.remote_scf
+            inputs.parent_folder = self.ctx.remote_scf
         else:
-            if not 'scf' in self.ctx.inputs.z2pack and not 'scf_parent_folder' in self.inputs:
+            if not 'scf' in inputs.z2pack and not 'scf_parent_folder' in self.inputs:
                 self.report('Neither `scf` nor `scf_parent_folder` was specified as an input. Aborting...')
                 return self.exit_codes.ERROR_INVALID_INPUT_SCF_Z2PACK
             if 'scf_parent_folder' in self.inputs:
                 # self.report('Setting scf remote_data from inputs.')
-                self.ctx.inputs.parent_folder = self.inputs.scf_parent_folder
+                inputs.parent_folder = self.inputs.scf_parent_folder
 
+        self.ctx.inputs = inputs
         self.ctx.iteration = 0
         self.ctx.max_iteration = len(self.ctx.crossings)
 
