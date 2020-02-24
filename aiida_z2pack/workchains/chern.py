@@ -282,8 +282,34 @@ class FindCrossingsWorkChain(WorkChain):
 
     def first_bands_step(self):
         self.ctx.iteration += 1
-        inputs = self.ctx.inputs
+        from copy import deepcopy
+        inputs = deepcopy(self.ctx.inputs)
         inputs.kpoints = self.inputs.starting_kpoints
+
+        try:
+            kpt = inputs.kpoints.get_kpoints()
+        except:
+            kpt = inputs.kpoints.get_kpoints_mesh(print_list=True)
+        nkpt = len(kpt)
+        if 'settings' in inputs:
+            settings = inputs.settings.get_dict()
+            if 'cmdline' in settings:
+                ptr = settings['cmdline']
+                npools = None
+                if '-npools' in ptr:
+                    i = ptr.index('-npools')
+                    npools = ptr[i + 1]
+                elif '-nk' in ptr:
+                    i = ptr.index('-nk')
+                    npools = ptr[i + 1]
+
+                if not npools is None and npools > nkpt:
+                    for n in range(nkpt, 0, -1):
+                        if npools % n == 0:
+                            ptr[i + 1] = str(n)
+                            break
+
+                inputs.pw.settings = settings
 
         inputs = prepare_process_inputs(PwBaseWorkChain, inputs)
         running = self.submit(PwBaseWorkChain, **inputs)
@@ -620,9 +646,6 @@ class Z2pack3DChernWorkChain(WorkChain):
         return not isinstance(scheduler, DirectScheduler)
 
     def run_z2pack_all(self):
-        cross = self.ctx.crossings[self.ctx.iteration]
-        self.ctx.iteration += 1
-
         old = self.ctx.inputs.z2pack.z2pack_settings.get_dict()
         for cross in self.ctx.crossings:
             old.update({
