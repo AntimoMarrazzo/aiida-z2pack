@@ -229,14 +229,16 @@ def merge_crossing_results(**kwargs):
     if len(merge):
         merge = np.unique(merge, axis=0)
 
-        merge_cart = np.dot(merge, recipr)
+        if len(merge) > 1:
+            merge_cart = np.dot(merge, recipr)
+            aggl = AgglomerativeClustering(n_clusters=None, distance_threshold=0.005, linkage='average')
+            res  = aggl.fit(merge_cart)
 
-        aggl = AgglomerativeClustering(n_clusters=None, distance_threshold=0.005, linkage='average')
-        res  = aggl.fit(merge_cart)
-
-        for n in np.unique(res.labels_):
-            w = np.where(res.labels_ == n)[0]
-            new.append(np.average(merge[w], axis=0))
+            for n in np.unique(res.labels_):
+                w = np.where(res.labels_ == n)[0]
+                new.append(np.average(merge[w], axis=0))
+        else:
+            new = merge
 
     new = np.array(new)
 

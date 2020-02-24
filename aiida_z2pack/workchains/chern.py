@@ -555,6 +555,7 @@ class Z2pack3DChernWorkChain(WorkChain):
             self.exposed_outputs(
                 workchain,
                 FindCrossingsWorkChain,
+                namespace='find'
             )
         )
 
@@ -566,8 +567,10 @@ class Z2pack3DChernWorkChain(WorkChain):
             self.ctx.remote_scf = self.inputs.scf_parent_folder
             return False
 
-        if 'remote_scf' in self.ctx and 'scf' in self.inputs:
-            self.report('WARNING: `scf` already performed withinf FindCrossingsWorkChain.')
+        if 'remote_scf' in self.ctx:
+            if 'scf' in self.inputs:
+                self.report('WARNING: `scf` already performed withinf FindCrossingsWorkChain.')
+
             return False
 
         return True
