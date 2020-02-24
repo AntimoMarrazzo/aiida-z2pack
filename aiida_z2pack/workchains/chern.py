@@ -301,22 +301,25 @@ class FindCrossingsWorkChain(WorkChain):
         except:
             kpt = inputs.kpoints.get_kpoints_mesh(print_list=True)
         nkpt = len(kpt)
-        if 'settings' in inputs:
-            settings = inputs.settings.get_dict()
+        self.report('DEBUG: settings in inputs: {}'.format('settings' in inputs))
+        if 'settings' in inputs.pw:
+            settings = inputs.pw.settings.get_dict()
             if 'cmdline' in settings:
                 ptr = settings['cmdline']
                 npools = None
                 if '-npools' in ptr:
                     i = ptr.index('-npools')
-                    npools = ptr[i + 1]
+                    npools = int(ptr[i + 1])
                 elif '-nk' in ptr:
                     i = ptr.index('-nk')
-                    npools = ptr[i + 1]
+                    npools = int(ptr[i + 1])
 
                 if not npools is None and npools > nkpt:
+                    self.report('WARNING: npools={} > nkpt={}'.format(npools, nkpt))
                     for n in range(nkpt, 0, -1):
                         if npools % n == 0:
                             ptr[i + 1] = str(n)
+                            self.report('... reducing npools to {}.'.format(n))
                             break
 
                 inputs.pw.settings = settings
