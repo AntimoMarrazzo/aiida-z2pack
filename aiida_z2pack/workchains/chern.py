@@ -435,10 +435,18 @@ class Z2pack3DChernWorkChain(WorkChain):
                 }
             )
         spec.expose_inputs(
-            Z2packBaseWorkChain, namespace='z2pack_base',
-            exclude=('clean_workdir', 'structure', 'parent_folder', 'pw_code'),
+            PwBaseWorkChain, namespace='scf',
+            exclude=('clean_workdir', 'pw.structure', 'pw.code'),
             namespace_options={
-                'help': 'Inputs for the `FindCrossingsWorkChain`.'
+                'required':False, 'populate_defaults':False,
+                'help': 'Inputs for the `PwBaseWorkChain` scf calculation.'
+                }
+            )
+        spec.expose_inputs(
+            Z2packBaseWorkChain, namespace='z2pack_base',
+            exclude=('clean_workdir', 'structure', 'parent_folder', 'pw_code', 'scf'),
+            namespace_options={
+                'help': 'Inputs for the `Z2packBaseWorkChain`.'
                 }
             )
 
@@ -451,6 +459,10 @@ class Z2pack3DChernWorkChain(WorkChain):
                 cls.inspect_find_crossings,
             ).else_(
                 cls.set_crossings_from_input
+                ),
+            if_(cls.should_do_scf)(
+                cls.run_scf,
+                cls.inspect_scf
                 ),
             cls.prepare_z2pack,
             if_(cls.should_do_alltogheter)(
@@ -546,21 +558,51 @@ class Z2pack3DChernWorkChain(WorkChain):
             )
         )
 
+    def should_do_scf(self):
+        if 'scf_parent_folder' in self.inputs:
+            if 'scf' in self.inputs:
+                self.report('WARNING: both `scf` and `scf_parent_folder` input ports specfied. `scf` will be ignored')
+
+            self.ctx.remote_scf = self.inputs.scf_parent_folder
+            return False
+
+        if 'remote_scf' in self.ctx and 'scf' in self.inputs:
+            self.report('WARNING: `scf` already performed withinf FindCrossingsWorkChain.')
+            return False
+
+        return True
+
+    def run_scf(self):
+        inputs = AttributeDict(self.exposed_inputs(PwBaseWorkChain, namespace='scf'))
+        inputs.pw.structure = self.ctx.current_structure
+        inputs.pw.code      = self.inputs.pw_code
+
+        inputs.pw.parameters = inputs.pw.parameters.get_dict()
+        inputs.pw.parameters.setdefault('CONTROL', {})
+        inputs.pw.parameters['CONTROL']['calculation'] = 'scf'
+
+        inputs = prepare_process_inputs(PwBaseWorkChain, inputs)
+        running = self.submit(PwBaseWorkChain, **inputs)
+
+        self.report('launching PwBaseWorkChain<{}> for starting scf'.format(running.pk))
+
+        return ToContext(workchain_scf=running)
+
+    def inspect_scf(self):
+        """Inspect the result of the starting scf `PwBaseWorkChain`."""
+        workchain = self.ctx.workchain_scf
+
+        if not workchain.is_finished_ok:
+            self.report('Starting scf PwBaseWorkChain failed with exit status {}'.format(workchain.exit_status))
+            return self.exit_codes.ERROR_SUB_PROCESS_FAILED_STARTING_SCF
+
+        self.ctx.remote_scf = self.ctx.workchain_scf.outputs.remote_folder
+
     def prepare_z2pack(self):
         inputs = AttributeDict(self.exposed_inputs(Z2packBaseWorkChain, namespace='z2pack_base'))
         inputs.pw_code   = self.inputs.pw_code
         inputs.structure = self.ctx.current_structure
-
-        if 'remote_scf' in self.ctx:
-            # self.report('Setting scf remote_data from `FindCrossingsWorkChain` output.')
-            inputs.parent_folder = self.ctx.remote_scf
-        else:
-            if not 'scf' in inputs.z2pack and not 'scf_parent_folder' in self.inputs:
-                self.report('Neither `scf` nor `scf_parent_folder` was specified as an input. Aborting...')
-                return self.exit_codes.ERROR_INVALID_INPUT_SCF_Z2PACK
-            if 'scf_parent_folder' in self.inputs:
-                # self.report('Setting scf remote_data from inputs.')
-                inputs.parent_folder = self.inputs.scf_parent_folder
+        inputs.parent_folder = self.ctx.remote_scf
 
         self.ctx.inputs = inputs
         self.ctx.iteration = 0
