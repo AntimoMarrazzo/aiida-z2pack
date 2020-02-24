@@ -17,6 +17,16 @@ PwBaseWorkChain     = WorkflowFactory('quantumespresso.pw.base')
 PwRelaxWorkChain    = WorkflowFactory('quantumespresso.pw.relax')
 Z2packBaseWorkChain = WorkflowFactory('z2pack.base')
 
+def deep_copy(old):
+    res = {}
+    for k,v in old.items():
+        if not isinstance(v, dict):
+            res[k] = v
+        else:
+            res[k] = deep_copy(v)
+
+    return res
+
 class FindCrossingsWorkChain(WorkChain):
     """Workchain to find bands crossing in the Brillouin Zone using
     a series of quantum espresso bands calculations."""
@@ -282,8 +292,8 @@ class FindCrossingsWorkChain(WorkChain):
 
     def first_bands_step(self):
         self.ctx.iteration += 1
-        from copy import deepcopy
-        inputs = deepcopy(self.ctx.inputs)
+
+        inputs = AttributeDict(deep_copy(self.ctx.inputs))
         inputs.kpoints = self.inputs.starting_kpoints
 
         try:
