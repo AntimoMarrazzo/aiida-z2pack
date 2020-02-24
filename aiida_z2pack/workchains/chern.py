@@ -239,19 +239,21 @@ class FindCrossingsWorkChain(WorkChain):
         self.ctx.iteration = 0
         # self.ctx.max_iteration = self.inputs.max_iter
         if 'nscf' in self.inputs:
-            self.ctx.inputs = AttributeDict(self.exposed_inputs(PwBaseWorkChain, namespace='nscf'))
+            inputs = AttributeDict(self.exposed_inputs(PwBaseWorkChain, namespace='nscf'))
         else:
-            self.ctx.inputs = AttributeDict(self.exposed_inputs(PwBaseWorkChain, namespace='scf'))
+            inputs = AttributeDict(self.exposed_inputs(PwBaseWorkChain, namespace='scf'))
 
-        self.ctx.inputs.pw.parameters = self.ctx.inputs.pw.parameters.get_dict()
-        self.ctx.inputs.pw.parameters.setdefault('CONTROL', {})
-        self.ctx.inputs.pw.parameters['CONTROL']['calculation'] = 'nscf'
-            
-        self.ctx.inputs.pw.parent_folder = self.ctx.scf_folder
-        self.ctx.inputs.clean_workdir = self.inputs.clean_workdir
-        self.ctx.inputs.pw.structure  = self.ctx.current_structure
-        self.ctx.inputs.pw.pseudos    = self.inputs.pseudos
-        self.ctx.inputs.pw.code       = self.inputs.code
+        inputs.pw.parameters = inputs.pw.parameters.get_dict()
+        inputs.pw.parameters.setdefault('CONTROL', {})
+        inputs.pw.parameters['CONTROL']['calculation'] = 'nscf'
+        
+        inputs.pw.parent_folder = self.ctx.scf_folder
+        inputs.clean_workdir = self.inputs.clean_workdir
+        inputs.pw.structure  = self.ctx.current_structure
+        inputs.pw.pseudos    = self.inputs.pseudos
+        inputs.pw.code       = self.inputs.code
+
+        self.ctx.inputs = inputs
 
         self.ctx.current_kpoints_distance  = self.inputs.starting_kpoints_distance.value
         self.ctx.min_kpoints_distance      = self.inputs.min_kpoints_distance.value
@@ -532,6 +534,8 @@ class Z2pack3DChernWorkChain(WorkChain):
         self.ctx.crossings_node = workchain.outputs.crossings
         self.ctx.crossings  = workchain.outputs.crossings.get_array('crossings')
         self.ctx.remote_scf = workchain.outputs.scf_remote_folder
+        if 'output_structure' in workchain.outputs:
+            self.ctx.current_structure = workchain.outputs.output_structure
 
         self.out_many(
             self.exposed_outputs(
