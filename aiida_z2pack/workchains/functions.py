@@ -138,6 +138,7 @@ def get_crossing_and_lowgap_points(bands_data, gap_threshold):
     query    = centers.query_ball_tree(kpt_tree, r=dist*1.74/2) #~sqrt(3) / 2
 
     # Limiting fermi velocity to ~ v_f[graphene] * 3
+    # GAP ~< dK * 10 / (#PT - 1)
     pinned_thr = dist * 3.75
 
     # Limiting number of new points per lowgap center based on distance between points
@@ -164,7 +165,10 @@ def get_crossing_and_lowgap_points(bands_data, gap_threshold):
         scale = 2.5 if lim > 1 else 1.001
         while app is None or len(app) > lim:
             app = np.where(gaps[q] < min_gap * scale)[0]
-            scale *= 0.95
+            scale *= 0.98
+            if scale < 1.0001:
+                app = np.where(gaps[q] < min_gap * 1.0001)[0]
+                break
         where_found.extend([q[i] for i in app if gaps[q[i]] <= gap_thr])
         where_pinned.extend([q[i] for i in app if gap_thr < gaps[q[i]] < pinned_thr])
 
