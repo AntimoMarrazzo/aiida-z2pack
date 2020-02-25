@@ -163,6 +163,8 @@ def get_crossing_and_lowgap_points(bands_data, gap_threshold):
 
         app = None
         scale = 2.5 if lim > 1 else 1.001
+        if dist == 200:
+            scale = 0.25 / min_gap
         while app is None or len(app) > lim:
             app = np.where(gaps[q] < min_gap * scale)[0]
             scale *= 0.98
