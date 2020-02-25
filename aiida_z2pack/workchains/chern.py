@@ -538,6 +538,8 @@ class Z2pack3DChernWorkChain(WorkChain):
             message='Must provide either `find` namelist or `crossings` ArrayData as input.')
         spec.exit_code(143, 'ERROR_INVALID_INPUT_SCF_Z2PACK',
             message='If `crossings` is given, must also specify `scf_parent_folder` or `z2pack.scf`.')
+        spec.exit_code(203, 'ERROR_NO_CROSSINGS_FOUND',
+            message='No crossings were found.')
 
     def setup(self):
         """Define the current structure in the context to be the input structure."""
@@ -596,6 +598,10 @@ class Z2pack3DChernWorkChain(WorkChain):
                 namespace='find'
             )
         )
+
+        if len(self.ctx.crossings) == 0:
+            self.report('No crossings were found. Abroting calculation...')
+            return self.exit_codes.ERROR_NO_CROSSINGS_FOUND
 
     def should_do_scf(self):
         if 'scf_parent_folder' in self.inputs:

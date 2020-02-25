@@ -3,15 +3,29 @@ from aiida.plugins import CalculationFactory
 
 PwCalculation = CalculationFactory('quantumespresso.pw')
 
-def deep_update(old, new):
-    """Update nested dictionaries"""
-    for k,v in new.items():
-        if isinstance(v, dict) and k in old and isinstance(old[k], dict):
-            deep_update(old[k], v)
+def deep_copy(old):
+    """Copy nested dictionaries."""
+    res = {}
+    for k,v in old.items():
+        if not isinstance(v, dict):
+            res[k] = v
         else:
-            old[k] = v  
-    return old
+            res[k] = deep_copy(v)
 
+    return res
+
+def deep_update(old, new, overwrite=True):
+    """Update nested dictionaries"""
+    if not overwrite:
+        res = deep_copy(old)
+    else:
+        res = old
+    for k,v in new.items():
+        if isinstance(v, dict) and k in res and isinstance(res[k], dict):
+            deep_update(res[k], v)
+        else:
+            res[k] = v  
+    return res
 
 def merge_dict_input_to_root(cls, *input_labels):
     """
