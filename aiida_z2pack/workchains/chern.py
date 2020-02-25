@@ -301,7 +301,6 @@ class FindCrossingsWorkChain(WorkChain):
         except:
             kpt = inputs.kpoints.get_kpoints_mesh(print_list=True)
         nkpt = len(kpt)
-        self.report('DEBUG: settings in inputs: {}'.format('settings' in inputs))
         if 'settings' in inputs.pw:
             settings = inputs.pw.settings.get_dict()
             if 'cmdline' in settings:

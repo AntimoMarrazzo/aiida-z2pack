@@ -83,7 +83,7 @@ class Z2packCalculation(CalcJob):
         spec.input(
             'pw_parameters', valid_type=orm.Dict,
             required=False,
-            help='Dict: Input parameters for the overlap code (pw2wannier).'
+            help='Dict: Input parameters for the nscf calculations.'
             )
         spec.input(
             'overlap_parameters', valid_type=orm.Dict,

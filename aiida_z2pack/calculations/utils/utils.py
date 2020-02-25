@@ -24,7 +24,7 @@ def merge_dict_input_to_root(cls, *input_labels):
                                 to merge the two in a Z2PackCalculation  ('pw_parameters', 'parameters')
     """
     res = {}
-    node = cls.inputs.parent_folder.get_incoming(node_class=orm.CalcJobNode).first().node
+    node = cls.inputs.parent_folder.creator
     while True:
         for label in input_labels:
             if not isinstance(label, (tuple,list)):
