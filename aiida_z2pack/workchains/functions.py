@@ -153,12 +153,12 @@ def get_crossing_and_lowgap_points(bands_data, gap_threshold):
         if len(q) == 0:
             continue
 
-        _, i = kpt_tree.query(last_pinned[n])
-        prev_min_gap = gaps[i]
         min_gap = gaps[q].min()
 
         # Skipping points where the gap didn't move much between iterations
-        if min_gap / prev_min_gap > 0.9 and dist < 0.05:
+        _, i = kpt_tree.query(last_pinned[n])
+        prev_min_gap = gaps[i]
+        if min_gap / prev_min_gap > 0.95 and dist < 0.005:
             continue
 
         app = None
