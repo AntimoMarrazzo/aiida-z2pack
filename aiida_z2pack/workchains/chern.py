@@ -3,6 +3,7 @@ from aiida.common import AttributeDict
 from aiida.plugins import WorkflowFactory
 from aiida.engine import WorkChain, ToContext, if_, while_, append_
 
+from aiida_quantumespresso.calculations import _lowercase_dict
 from aiida_quantumespresso.utils.mapping import prepare_process_inputs
 
 from .functions import (
@@ -661,7 +662,10 @@ class Z2pack3DChernWorkChain(WorkChain):
         computer  = self.inputs.pw_code.computer
         scheduler = computer.get_scheduler()
 
-        return not isinstance(scheduler, DirectScheduler)
+        settings = _lowercase_dict(self.ctx.inputs.get('z2pack_settings', {}), 'z2pack_settings')
+        symlink  = settings.get('parent_folder_symlink', False)
+
+        return not isinstance(scheduler, DirectScheduler) and not symlink
 
     def run_z2pack_all(self):
         old = self.ctx.inputs.z2pack.z2pack_settings.get_dict()
