@@ -137,39 +137,46 @@ class Z2packCalculation(CalcJob):
 
         # EXIT CODES ###########################################################################
         spec.exit_code(
-            100, 'ERROR_UNEXPECTED_FAILURE',
+            200, 'ERROR_NO_RETRIEVED_FOLDER',
+            message='The retrieved folder data node could not be accessed.'
+            )
+        spec.exit_code(
+            300, 'ERROR_OUTPUT_FILES',
             message=(
                 'Something failed during the calulation and no output was produced. '
                 'Inpsect the stderr file for more information.'
                 )
             )
+        # spec.exit_code(
+        #     310, 'ERROR_UNEXPECTED_FAILURE',
+        #     message=(
+        #         'Something failed during the calulation and no output was produced. '
+        #         'Inpsect the stderr file for more information.'
+        #         )
+        #     )
         spec.exit_code(
-            110, 'ERROR_PW_CRASH',
+            320, 'ERROR_PW_CRASH',
              message=(
                 'Something failed during the pw/pw2wannier calulation. '
                 'Inpsect the \'{}\' file for more information.'.format(cls._ERROR_PW_FILE)
                 )
             )
         spec.exit_code(
-            120, 'ERROR_W90_CRASH',
+            330, 'ERROR_W90_CRASH',
              message=(
                 'Something failed during the wannier90 calulation. '
                 'Inpsect the \'{}\' file for more information.'.format(cls._ERROR_W90_FILE)
                 )
             )
         spec.exit_code(
-            130, 'ERROR_NO_RETRIEVED_FOLDER',
-            message='The retrieved folder data node could not be accessed.'
-            )
-        spec.exit_code(
-            210, 'ERROR_MISSING_RESULTS_FILE',
+            400, 'ERROR_MISSING_RESULTS_FILE',
             message=(
                 'The result file \'{}\' is missing. '.format(cls._OUTPUT_RESULT_FILE)
                 # 'Calculation interrupted by walltime.'
                 )
             )
         spec.exit_code(
-            220, 'ERROR_NO_SAVE_FILE',
+            410, 'ERROR_MISSING_SAVE_FILE',
             message='The save file `{}` is missing.'.format(cls._OUTPUT_SAVE_FILE)
             )
 

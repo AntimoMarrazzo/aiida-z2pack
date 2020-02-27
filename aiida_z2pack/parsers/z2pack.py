@@ -13,27 +13,31 @@ class Z2packParser(Parser):
     Z2packParser
     """    
     def parse(self, **kwargs):
+        pc = self.node.process_class
+
         try:
             out_folder = self.retrieved
         except exceptions.NotExistent:
-            return self.exit_codes.ERROR_NO_RETRIEVED_FOLDER
-
-        # Checks for error output files
+            return self.exit(self.exit_codes.ERROR_NO_RETRIEVED_FOLDER)
         retrieved_names = out_folder.list_object_names()
-        if not Z2packCalculation._OUTPUT_Z2PACK_FILE in retrieved_names:
-            return self.exit_codes.ERROR_UNEXPECTED_FAILURE
-        if Z2packCalculation._ERROR_W90_FILE in retrieved_names:
-            return self.exit_codes.ERROR_W90_CRASH
-        if Z2packCalculation._ERROR_PW_FILE in retrieved_names:
-            return self.exit_codes.ERROR_PW0_CRASH
-        if not Z2packCalculation._OUTPUT_SAVE_FILE in retrieved_names:
-            return self.exit_codes.ERROR_NO_SAVE_FILE
-        if not Z2packCalculation._OUTPUT_RESULT_FILE in retrieved_names:
-            return self.exit_codes.ERROR_MISSING_RESULTS_FILE
 
-        with out_folder.open(Z2packCalculation._OUTPUT_RESULT_FILE) as f:
+        # Missing required files
+        if not pc._OUTPUT_Z2PACK_FILE in retrieved_names:
+            return self.exit(self.exit_codes.ERROR_OUTPUT_FILES)
+        if not pc._OUTPUT_SAVE_FILE in retrieved_names:
+            return self.exit(self.exit_codes.ERROR_MISSING_SAVE_FILE)
+        if not pc._OUTPUT_RESULT_FILE in retrieved_names:
+            return self.exit(self.exit_codes.ERROR_MISSING_RESULTS_FILE)
+
+        # Checks for presence of error files
+        if pc._ERROR_W90_FILE in retrieved_names:
+            return self.exit(self.exit_codes.ERROR_W90_CRASH)
+        if pc._ERROR_PW_FILE in retrieved_names:
+            return self.exit(self.exit_codes.ERROR_PW_CRASH)
+
+        with out_folder.open(pc._OUTPUT_RESULT_FILE) as f:
             data = json.load(f)
-        with out_folder.open(Z2packCalculation._OUTPUT_Z2PACK_FILE) as f:
+        with out_folder.open(pc._OUTPUT_Z2PACK_FILE) as f:
             out_file = f.readlines()
 
         gap_f   = len(data['convergence_report']['GapCheck']['FAILED'])
@@ -58,6 +62,18 @@ class Z2packParser(Parser):
         data['z2pack_version'] =  z2pack_version 
 
         self.out('output_parameters', Dict(dict=data))
+
+    def exit(self, exit_code):
+        """Log the exit message of the give exit code with level `ERROR` and return the exit code.
+
+        This is a utility function if one wants to return from the parse method and automically add the exit message
+        associated to the exit code as a log message to the node: e.g. `return self.exit(self.exit_codes.LABEL))`
+
+        :param exit_code: an `ExitCode`
+        :return: the exit code
+        """
+        self.logger.error(exit_code.message)
+        return exit_code
 
 
 

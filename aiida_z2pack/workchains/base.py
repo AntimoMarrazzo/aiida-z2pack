@@ -240,7 +240,7 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
 @register_error_handler(Z2packBaseWorkChain, 600)
 def _handle_unrecoverable_failure(self, calculation):
     """Handle calculations with an exit status below 400 which are unrecoverable, so abort the work chain."""
-    if calculation.exit_status < 200:
+    if calculation.exit_status < 400:
         self.report_error_handled(calculation, 'unrecoverable error, aborting...')
         return ErrorHandlerReport(True, True, self.exit_codes.ERROR_UNRECOVERABLE_FAILURE)
 
@@ -253,7 +253,7 @@ def _handle_failed(self, calculation):
 
 @register_error_handler(Z2packBaseWorkChain, 585)
 def _handle_no_save_file(self, calculation):
-    if calculation.exit_status == Z2packCalculation.exit_codes.ERROR_NO_SAVE_FILE.status:
+    if calculation.exit_status == Z2packCalculation.exit_codes.ERROR_MISSING_SAVE_FILE.status:
         if not 'restart_no_save' in self.ctx:
             self.ctx.restart_no_save = True
             self.ctx.inputs.z2pack_settings['restart_mode'] = False

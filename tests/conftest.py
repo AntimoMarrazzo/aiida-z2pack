@@ -114,7 +114,7 @@ def generate_calc_job_node():
         if test_name is not None:
             basepath = os.path.dirname(os.path.abspath(__file__))
             filepath = os.path.join(
-                basepath, 'parsers', 'fixtures', entry_point_name[len('quantumespresso.'):], test_name
+                basepath, 'parsers', 'fixtures', entry_point_name[len('z2pack.'):], test_name
             )
 
             retrieved = orm.FolderData()
