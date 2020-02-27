@@ -139,7 +139,7 @@ def get_crossing_and_lowgap_points(bands_data, gap_threshold):
 
     # Limiting fermi velocity to ~ v_f[graphene] * 3
     # GAP ~< dK * 10 / (#PT - 1)
-    pinned_thr = dist * 3.75
+    pinned_thr = dist * 4.00
 
     # Limiting number of new points per lowgap center based on distance between points
     lim = max(-5 // np.log10(dist), 1)  if dist < 1 else 200
@@ -156,10 +156,10 @@ def get_crossing_and_lowgap_points(bands_data, gap_threshold):
         min_gap = gaps[q].min()
 
         # Skipping points where the gap didn't move much between iterations
-        _, i = kpt_tree.query(last_pinned[n])
-        prev_min_gap = gaps[i]
-        if min_gap / prev_min_gap > 0.95 and dist < 0.005:
-            continue
+        # _, i = kpt_tree.query(last_pinned[n])
+        # prev_min_gap = gaps[i]
+        # if min_gap / prev_min_gap > 0.95 and dist < 0.005:
+        #     continue
 
         app = None
         scale = 2.5 if lim > 1 else 1.001
