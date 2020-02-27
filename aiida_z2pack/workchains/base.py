@@ -104,6 +104,9 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
             message='WCCs position is not stable when increasing k-points on a line.')
         spec.exit_code(221, 'ERROR_GAP_TOL_CONVERGENCE_FAILED',
             message='Position of largest gap between WCCs varies too much between neighboring lines.')
+        spec.exit_code(231, 'ERROR_FAILED_SAVEFILE_TWICE',
+            message='The calculation failed to produce the savefile for a restart twice.')
+        
 
     def setup(self):
         super().setup()
@@ -181,6 +184,12 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
                 remote = self.ctx.parent_folder
             self.ctx.inputs.parent_folder = remote
 
+    def inspect_calculation(self):
+        self.ctx.inputs.z2pack_settings['restart_mode'] = True
+
+        return super().inspect_calculation()
+
+
     # def results(self):
     #     """Attach the output parameters of the last workchain to the outputs."""
 
@@ -241,6 +250,24 @@ def _handle_failed(self, calculation):
         calculation.outputs.output_parameters
     except:
         return ErrorHandlerReport(False, True, self.exit_codes.ERROR_UNRECOVERABLE_FAILURE)
+
+@register_error_handler(Z2packBaseWorkChain, 585)
+def _handle_no_save_file(self, calculation):
+    if calculation.exit_status == Z2packCalculation.exit_codes.ERROR_NO_SAVE_FILE.status:
+        if not 'restart_no_save' in self.ctx:
+            self.ctx.restart_no_save = True
+            self.ctx.inputs.z2pack_settings['restart_mode'] = False
+            self.report_error_handled(
+                calculation,
+                'The calculation died before the savefile for a restart was produced, trying to restart it from scratch.'
+                )
+            return ErrorHandlerReport(True, True, 0)
+        else:
+            self.report_error_handled(
+                calculation,
+                self.exit_codes.ERROR_FAILED_SAVEFILE_TWICE.message + ' Aborting...'
+                )
+            return ErrorHandlerReport(False, True, self.exit_codes.ERROR_FAILED_SAVEFILE_TWICE)
 
 @register_error_handler(Z2packBaseWorkChain, 580)
 def _handle_not_converged(self, calculation):

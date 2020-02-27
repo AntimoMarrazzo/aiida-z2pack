@@ -26,6 +26,8 @@ class Z2packParser(Parser):
             return self.exit_codes.ERROR_W90_CRASH
         if Z2packCalculation._ERROR_PW_FILE in retrieved_names:
             return self.exit_codes.ERROR_PW0_CRASH
+        if not Z2packCalculation._OUTPUT_SAVE_FILE in retrieved_names:
+            return self.exit_codes.ERROR_NO_SAVE_FILE
         if not Z2packCalculation._OUTPUT_RESULT_FILE in retrieved_names:
             return self.exit_codes.ERROR_MISSING_RESULTS_FILE
 

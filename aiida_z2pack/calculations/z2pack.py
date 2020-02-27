@@ -168,6 +168,10 @@ class Z2packCalculation(CalcJob):
                 # 'Calculation interrupted by walltime.'
                 )
             )
+        spec.exit_code(
+            220, 'ERROR_NO_SAVE_FILE',
+            message='The save file `{}` is missing.'.format(cls._OUTPUT_SAVE_FILE)
+            )
 
     def prepare_for_submission(self, folder):
         self.inputs.metadata.options.parser_name     = 'z2pack.z2pack'
