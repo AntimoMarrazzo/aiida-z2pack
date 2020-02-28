@@ -665,6 +665,7 @@ class Z2pack3DChernWorkChain(WorkChain):
         settings = _lowercase_dict(self.ctx.inputs.get('z2pack_settings', {}), 'z2pack_settings')
         symlink  = settings.get('parent_folder_symlink', False)
 
+        return False
         return not isinstance(scheduler, DirectScheduler) and not symlink
 
     def run_z2pack_all(self):
