@@ -717,8 +717,8 @@ class Z2pack3DChernWorkChain(WorkChain):
         workchain = self.ctx.workchain_z2pack[-1]
 
         if not workchain.is_finished_ok:
-            self.report('Z2packBaseWorkChain failed with exit status {}'.format(workchain.exit_status))
-            return self.exit_codes.ERROR_SUB_PROCESS_FAILED_Z2PACK
+            self.report('WARNING: Z2packBaseWorkChain failed with exit status {}'.format(workchain.exit_status))
+            # return self.exit_codes.ERROR_SUB_PROCESS_FAILED_Z2PACK
 
     def results(self):
         res = merge_chern_results(
