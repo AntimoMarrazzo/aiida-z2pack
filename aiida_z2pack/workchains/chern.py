@@ -163,14 +163,6 @@ class FindCrossingsWorkChain(WorkChain):
             message='the scf PwBaseWorkChain sub process failed')
         spec.exit_code(132, 'ERROR_SUB_PROCESS_FAILED_BANDS',
             message='the bands PwBaseWorkChain sub process failed')
-        spec.exit_code(142, 'ERROR_CANT_PINPOINT_LOWGAP_ZONE',
-            message='After two iterations, no points with low_gap found. Aborting calculation!')
-        spec.exit_code(152, 'ERROR_MINIMUM_DISTANCE_RAECHED',
-            message='The minimum distance was reached without finding any crossings.')
-        spec.exit_code(162, 'ERROR_TOO_MANY_ARRAYS',
-            message='An ArrayData node contains more arrays than expected.')
-        spec.exit_code(172, 'ERROR_MEMORY_TOO_MANY_KPOINTS',
-            message='The generation of the kpoints failed because the mesh size was too big.')
 
     def setup(self):
         """Define the current structure in the context to be the input structure."""
