@@ -245,13 +245,15 @@ def _handle_unrecoverable_failure(self, calculation):
         return ErrorHandlerReport(True, True, self.exit_codes.ERROR_UNRECOVERABLE_FAILURE)
 
 @register_error_handler(Z2packBaseWorkChain, 590)
-def _handle_failed(self, calculation):
-    try:
-        calculation.outputs.output_parameters
-    except:
-        return ErrorHandlerReport(False, True, self.exit_codes.ERROR_UNRECOVERABLE_FAILURE)
+def _handle_out_of_walltime(self, calculation):
+    if calculation.exit_status == Z2packCalculation.exit_codes.ERROR_MISSING_RESULTS_FILE.status:
+        self.report_error_handled(
+            calculation,
+            'The calculation died because of exceeded walltime. Restarting...'
+            )
+        return ErrorHandlerReport(True, True, 0)
 
-@register_error_handler(Z2packBaseWorkChain, 585)
+@register_error_handler(Z2packBaseWorkChain, 580)
 def _handle_no_save_file(self, calculation):
     if calculation.exit_status == Z2packCalculation.exit_codes.ERROR_MISSING_SAVE_FILE.status:
         if not 'restart_no_save' in self.ctx:
@@ -269,7 +271,14 @@ def _handle_no_save_file(self, calculation):
                 )
             return ErrorHandlerReport(False, True, self.exit_codes.ERROR_FAILED_SAVEFILE_TWICE)
 
-@register_error_handler(Z2packBaseWorkChain, 580)
+@register_error_handler(Z2packBaseWorkChain, 570)
+def _handle_failed(self, calculation):
+    try:
+        calculation.outputs.output_parameters
+    except:
+        return ErrorHandlerReport(False, True, self.exit_codes.ERROR_UNRECOVERABLE_FAILURE)
+
+@register_error_handler(Z2packBaseWorkChain, 560)
 def _handle_not_converged(self, calculation):
     # try:
     #     settings = calculation.inputs.z2pack.z2pack_settings
