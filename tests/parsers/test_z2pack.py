@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import os
 from aiida import orm
 from aiida.common import LinkType
@@ -9,6 +10,7 @@ def test_z2pack_default(
     generate_parser, generate_calc_job_node,
     data_regression
     ):
+    """Test the parsing of a successful calculation."""
     name = 'default'
     entry_point_calc_job = 'z2pack.z2pack'
     entry_point_parser = 'z2pack.z2pack'
@@ -31,6 +33,7 @@ def test_z2pack_failed_missing(
     generate_parser, generate_calc_job_node,
     data_regression
     ):
+    """Test the parsing of calculation finished with no output files."""
     name = 'failed_missing'
     entry_point_calc_job = 'z2pack.z2pack'
     entry_point_parser = 'z2pack.z2pack'
@@ -50,6 +53,7 @@ def test_z2pack_failed_missing_results(
     generate_parser, generate_calc_job_node,
     data_regression
     ):
+    """Test the parsing of calculation finished with no result file."""
     name = 'failed_missing_results'
     entry_point_calc_job = 'z2pack.z2pack'
     entry_point_parser = 'z2pack.z2pack'
@@ -69,6 +73,7 @@ def test_z2pack_failed_missing_save(
     generate_parser, generate_calc_job_node,
     data_regression
     ):
+    """Test the parsing of calculation finished with no save file."""
     name = 'failed_missing_save'
     entry_point_calc_job = 'z2pack.z2pack'
     entry_point_parser = 'z2pack.z2pack'
@@ -88,6 +93,7 @@ def test_z2pack_failed_pwcrash(
     generate_parser, generate_calc_job_node,
     data_regression
     ):
+    """Test the parsing of calculation finished with a pw CRASH error file."""
     name = 'failed_pwcrash'
     entry_point_calc_job = 'z2pack.z2pack'
     entry_point_parser = 'z2pack.z2pack'
@@ -107,6 +113,7 @@ def test_z2pack_failed_w90crash(
     generate_parser, generate_calc_job_node,
     data_regression
     ):
+    """Test the parsing of calculation finished with a w90 *.werr error file."""
     name = 'failed_w90crash'
     entry_point_calc_job = 'z2pack.z2pack'
     entry_point_parser = 'z2pack.z2pack'

@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 from aiida.common import exceptions
 from aiida_quantumespresso.calculations import _lowercase_dict
 
@@ -6,20 +7,20 @@ def prepare_z2pack(cls, folder):
     try:
         pw_code = cls.inputs.pw_code
     except AttributeError:
-        raise exceptions.InputValidationError("No nscf code specified for this calculation")
+        raise exceptions.InputValidationError('No nscf code specified for this calculation')
     try:
         overlap_code = cls.inputs.overlap_code
     except AttributeError:
-        raise exceptions.InputValidationError("No overlap code specified for this calculation")
+        raise exceptions.InputValidationError('No overlap code specified for this calculation')
     try:
         wannier90_code = cls.inputs.wannier90_code
     except AttributeError:
-        raise exceptions.InputValidationError("No Wannier90 code specified for this calculation")
-    
+        raise exceptions.InputValidationError('No Wannier90 code specified for this calculation')
+
     try:
         settings_dict = _lowercase_dict(cls.inputs.z2pack_settings.get_dict(), dict_name='z2pack_settings')
     except:
-        raise exceptions.InputValidationError("No settings specified for this calculation")          
+        raise exceptions.InputValidationError('No settings specified for this calculation')
 
     if not 'npools' in settings_dict:
         pools_cmd = ''
@@ -28,17 +29,17 @@ def prepare_z2pack(cls, folder):
         if isinstance(npools, int):
             pools_cmd = ' -nk ' + str(npools) + ' '
         else:
-            raise exceptions.InputValidationError("npools must be an integer.")
+            raise exceptions.InputValidationError('npools must be an integer.')
 
     try:
         dim_mode = settings_dict['dimension_mode']
     except KeyError:
-        raise exceptions.InputValidationError("No dimension_mode specified for this calculation")
+        raise exceptions.InputValidationError('No dimension_mode specified for this calculation')
 
     try:
         invariant = settings_dict['invariant']
     except KeyError:
-        raise exceptions.InputValidationError("No invariant specified for this calculation")
+        raise exceptions.InputValidationError('No invariant specified for this calculation')
 
     computer           = cls.inputs.pw_code.computer
     proc_per_machine   = computer.get_default_mpiprocs_per_machine()
@@ -63,8 +64,8 @@ def prepare_z2pack(cls, folder):
             surface = settings_dict['surface']
             # surface = settings_dict.get_dict()['surface']
         except KeyError:
-            raise exceptions.InputValidationError("A surface must be specified for dim_mode==3D ")
-    
+            raise exceptions.InputValidationError('A surface must be specified for dim_mode==3D ')
+
     input_file_lines=[]
     input_file_lines.append('#!/usr/bin/env python')
     input_file_lines.append('import z2pack')
@@ -73,22 +74,22 @@ def prepare_z2pack(cls, folder):
     nscf_cmd      = ' {} {}'.format(mpi_command, pw_code.get_execname())
     overlap_cmd   = ' {} {}'.format(mpi_command, overlap_code.get_execname())
     wannier90_cmd = ' {}'.format(wannier90_code.get_execname())
-    
+
     z2cmd = (
         "(\n    '" +
         "ln -s ../out .; ln -s ../pseudo .;'\n    '" +
         wannier90_cmd + ' ' + cls._SEEDNAME + ' -pp;' + "' +\n    '" +
         nscf_cmd + pools_cmd + ' < ' + cls._INPUT_PW_NSCF_FILE + ' >& ' + cls._OUTPUT_PW_NSCF_FILE + ";' +\n    '" +
         overlap_cmd + ' < ' + cls._INPUT_OVERLAP_FILE + '  >& ' + cls._OUTPUT_OVERLAP_FILE + ";'\n" +
-        ")"
+        ')'
         # yapf: disable
         )
 
     # yapf: disable
-    input_file_lines.append("")
+    input_file_lines.append('')
     input_file_lines.append('z2cmd =' +  z2cmd)
 
-    input_file_lines.append("")
+    input_file_lines.append('')
     input_files = [cls._INPUT_PW_NSCF_FILE, cls._INPUT_OVERLAP_FILE,cls._INPUT_W90_FILE]
     input_file_lines.append('input_files = ' + str(input_files))
     input_file_lines.append('system = z2pack.fp.System(')

@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import os
 import pytest
 from aiida import orm
@@ -10,12 +11,13 @@ Z2packCalculation = CalculationFactory('z2pack.z2pack')
 
 @pytest.fixture()
 def pw_parameters():
+    """Fixture: parameters for pw calculation."""
     param = {
         'CONTROL': {
             'calculation': 'scf'
             },
         'SYSTEM': {
-            'ecutrho': 240.0, 
+            'ecutrho': 240.0,
             'ecutwfc': 30.0
             }
         }
@@ -23,6 +25,7 @@ def pw_parameters():
 
 @pytest.fixture(params=[(),], ids=['base',])
 def z2pack_settings(request):
+    """Fixture: parameters for z2pack calculation."""
     z2pack_settings = {
         'mpi_command':'mpirun -np 23',
         'dimension_mode':'3D',
@@ -38,6 +41,7 @@ def z2pack_settings(request):
 
 @pytest.fixture()
 def inputs(fixture_code):
+    """Fixture: inputs for Z2packBaseWorkChain."""
     inputs = {
         'code': fixture_code('z2pack.z2pack'),
         'pw_code': fixture_code('quantumespresso.pw'),
@@ -55,6 +59,10 @@ def remote(
     generate_upf_data, generate_structure, generate_remote_data,
     pw_parameters
     ):
+    """Fixture: Remote folder created by a CalcJob with inputs.
+
+    :param pw_parameters: parameters to be linked as input node to the parent CalcJob.
+    """
     upf    = generate_upf_data('Si')
     struct = generate_structure()
     remote = generate_remote_data(
@@ -66,7 +74,7 @@ def remote(
             (upf, 'pseudos__Si'),
             ]
         )
-    
+
     return remote
 
 @pytest.fixture
@@ -75,6 +83,7 @@ def calc_info(
     remote, generate_calc_job,
     z2pack_settings, inputs
     ):
+    """Fixture: calc_info obtained by the bound method `prepare_for_submission` of Z2packCalculation."""
     inputs['parent_folder'] = remote
     inputs['z2pack_settings'] = orm.Dict(dict=z2pack_settings)
 
@@ -84,6 +93,7 @@ def calc_info(
     return calc_info
 
 class Test_z2pack_calc():
+    """Test class for Z2packCalculation."""
     inputs  = ['aiida.nscf.in', 'aiida.pw2wan.in', 'aiida.win', 'z2pack_aiida.py']
     outputs = ['z2pack_aiida.out', 'save.json', 'results.json']
     errors  = ['build/aiida.werr', 'build/CRASH']
@@ -95,18 +105,23 @@ class Test_z2pack_calc():
     retrieve_list = outputs + errors
 
     def test_calcinfo_type(self, calc_info):
+        """Test if calc_info is properly being returned by `prepare_for_submission`."""
         assert isinstance(calc_info, datastructures.CalcInfo), 'Unexpected return from `prepare_for_submission`.'
 
     def test_cmdline_params(self, calc_info):
+        """Test if the proper `cmdlin` is being set in calc_info."""
         assert sorted(calc_info.cmdline_params) == sorted(self.cmdline_params)
 
     def test_local_copy_list(self, calc_info):
+        """Test if the proper `local_copy_list` is being set in calc_info."""
         assert sorted(calc_info.local_copy_list) == sorted(self.local_copy_list)
 
     def test_retrieve_list(self, calc_info):
+        """Test if the proper `retrieve_list` is being set in calc_info."""
         assert sorted(calc_info.retrieve_list) == sorted(self.retrieve_list)
 
     def test_retrieve_temporary_list(self, calc_info):
+        """Test if the proper `retrieve_temporary_list` is being set in calc_info."""
         assert sorted(calc_info.retrieve_temporary_list) == sorted(self.retrieve_temporary_list)
 
     @pytest.mark.parametrize(
@@ -118,10 +133,11 @@ class Test_z2pack_calc():
         indirect=['z2pack_settings']
         )
     def test_remote_copy_list(self, calc_info, remote, with_symlink):
+        """Test if the proper `remote_copy_list` is being set in calc_info."""
         if not with_symlink:
             remote_copy_list = [
                 (
-                    remote.computer.uuid, 
+                    remote.computer.uuid,
                     os.path.join(remote.get_remote_path(), path),
                     path
                 ) for path in self.remotes
@@ -140,10 +156,11 @@ class Test_z2pack_calc():
         indirect=['z2pack_settings']
         )
     def test_remote_symlink_list(self, calc_info, remote, with_symlink):
+        """Test if the proper `remote_symlink_list` is being set in calc_info."""
         if with_symlink:
             remote_symlink_list = [
                 (
-                    remote.computer.uuid, 
+                    remote.computer.uuid,
                     os.path.join(remote.get_remote_path(), path),
                     path
                 ) for path in self.remotes
@@ -154,10 +171,12 @@ class Test_z2pack_calc():
             assert sorted(calc_info.remote_symlink_list) == sorted([])
 
     def test_input_created(self, calc_info, fixture_sandbox):
+        """Test if all the required input files are bing created."""
         assert sorted(fixture_sandbox.get_content_list()) == sorted(self.inputs)
 
     @pytest.mark.parametrize('name', inputs)
     def test_input_files(self, name, calc_info, fixture_sandbox, file_regression):
+        """Test if all the required input files are equal to the test prototype."""
         path = fixture_sandbox.get_abs_path(name)
         with open(path, 'r') as f:
             written_input = f.read()
@@ -170,7 +189,7 @@ def test_nested_restart(
     generate_upf_data, generate_remote_data, fixture_localhost,
     pw_parameters, z2pack_settings, tmpdir
     ):
-    """Test a default `PwCalculation`."""
+    """Test a Z2packCalculation with nested restarts."""
     tmp_scf      = tmpdir.mkdir('scf')
     tmp_remote_1 = tmpdir.mkdir('remote_1')
     tmp_remote_2 = tmpdir.mkdir('remote_2')
@@ -229,7 +248,7 @@ def test_nested_restart(
 
     process   = generate_calc_job('z2pack.z2pack', inputs=inputs)
     process.prepare_for_submission(fixture_sandbox)
-    
+
     test = process.inputs.pw_parameters.get_dict()
     assert test['SYSTEM']['ecutwfc'] == 30.0
     assert test['SYSTEM']['nbnd'] == 50

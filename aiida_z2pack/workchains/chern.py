@@ -1,3 +1,5 @@
+"""`FindCrossingsWorkChain` and `Z2pack3DChernWorkChain` workchains definitions."""
+from __future__ import absolute_import
 from aiida import orm
 from aiida.common import AttributeDict
 from aiida.plugins import WorkflowFactory
@@ -6,22 +8,26 @@ from aiida.engine import WorkChain, ToContext, if_, while_, append_
 from aiida_quantumespresso.calculations import _lowercase_dict
 from aiida_quantumespresso.utils.mapping import prepare_process_inputs
 
+# yapf: disable
 from .functions import (
     generate_cubic_grid, get_kpoint_grid_dimensionality,
     get_crossing_and_lowgap_points, merge_crossing_results,
     merge_chern_results
-    # yapf: disable
     )
+from six.moves import range
+# yapf: enable
 
 # Z2packCalculation   = CalculationFactory('z2pack.z2pack')
 
-PwBaseWorkChain     = WorkflowFactory('quantumespresso.pw.base')
-PwRelaxWorkChain    = WorkflowFactory('quantumespresso.pw.relax')
+PwBaseWorkChain = WorkflowFactory('quantumespresso.pw.base')
+PwRelaxWorkChain = WorkflowFactory('quantumespresso.pw.relax')
 Z2packBaseWorkChain = WorkflowFactory('z2pack.base')
 
+
 def deep_copy(old):
+    """Recursively copy nested dictionaries."""
     res = {}
-    for k,v in old.items():
+    for k, v in old.items():
         if not isinstance(v, dict):
             res[k] = v
         else:
@@ -29,12 +35,12 @@ def deep_copy(old):
 
     return res
 
-class FindCrossingsWorkChain(WorkChain):
-    """Workchain to find bands crossing in the Brillouin Zone using
-    a series of quantum espresso bands calculations."""
 
+class FindCrossingsWorkChain(WorkChain):
+    """Workchain to find bands crossing in the Brillouin Zone at generic positions using a series of quantum espresso bands calculations."""
     @classmethod
     def define(cls, spec):
+        # yapf: disable
         super().define(spec)
 
         # INPUTS ############################################################################
@@ -89,7 +95,7 @@ class FindCrossingsWorkChain(WorkChain):
         spec.input(
             'min_kpoints_distance', valid_type=orm.Float,
             default=orm.Float(5.E-4),
-            help='Stop iterations when `kpoints_distance`  drop below this value.'
+            help='Stop iterations when `kpoints_distance` drop below this value.'
             )
         spec.input(
             'starting_kpoints_distance', valid_type=orm.Float,
@@ -204,9 +210,11 @@ class FindCrossingsWorkChain(WorkChain):
         self.out('output_structure', self.ctx.current_structure)
 
     def should_do_scf(self):
+        """Determine if the scf calculaiton should be run."""
         return not 'parent_folder' in self.inputs
 
     def set_remote_scf(self):
+        """Set parent folder from input."""
         self.ctx.scf_folder = self.inputs.parent_folder
         self.ctx.workchain_scf = self.ctx.scf_folder.creator
 
@@ -247,6 +255,7 @@ class FindCrossingsWorkChain(WorkChain):
         self.out('scf_remote_folder', self.ctx.scf_folder)
 
     def setup_bands_loop(self):
+        """Perform initial setup for bands calculation loop."""
         self.ctx.iteration = 0
         # self.ctx.max_iteration = self.inputs.max_iter
         if 'bands' in self.inputs:
@@ -287,16 +296,18 @@ class FindCrossingsWorkChain(WorkChain):
         self.report('Starting loop to find bands crossings.')
 
     def should_do_first_bands(self):
-        """Determine if the first bands should be run using starting_kpoints"""
+        """Determine if the first bands should be run using starting_kpoints."""
         return 'starting_kpoints' in self.inputs
 
     def start_from_scf(self):
+        """Use the scf kpoint grid as the starting point."""
         self.report(
             'No `starting_kpoints` provided. Using BandsData from `scf` calculation...'
         )
         self.ctx.bands = self.ctx.workchain_scf.outputs.output_band
 
     def first_bands_step(self):
+        """Do a bandcalculation using the kpoints provided in `starting_kpoints`."""
         self.ctx.iteration += 1
 
         inputs = AttributeDict(deep_copy(self.ctx.inputs))
@@ -344,12 +355,14 @@ class FindCrossingsWorkChain(WorkChain):
         return self.ctx.do_loop
 
     def setup_grid(self):
+        """Loop step to setup the new kpoint grid."""
         distance = orm.Float(self.ctx.current_kpoints_distance)
         self.ctx.current_kpoints = generate_cubic_grid(
             self.ctx.current_structure, self.ctx.found_crossings[-1], distance,
             self.ctx.dim)
 
     def run_bands(self):
+        """Run the band calculation."""
         self.ctx.iteration += 1
         inputs = self.ctx.inputs
         inputs.kpoints = self.ctx.current_kpoints
@@ -376,7 +389,7 @@ class FindCrossingsWorkChain(WorkChain):
         self.ctx.bands = workchain.outputs.output_band
 
     def analyze_bands(self):
-        """Extract kpoints with gap lower than the gap threshold"""
+        """Extract kpoints with gap lower than the gap threshold."""
         bands = self.ctx.bands
 
         self.report('Analyzing bands results for BandsData<{}>'.format(
@@ -399,7 +412,7 @@ class FindCrossingsWorkChain(WorkChain):
         self.ctx.found_crossings.append(res)
 
     def stepper(self):
-        """Perform the loop step operation of modifying the thresholds"""
+        """Perform the loop step operation of modifying the thresholds."""
         if self.ctx.flag:
             self.ctx.do_loop = False
             return
@@ -414,6 +427,7 @@ class FindCrossingsWorkChain(WorkChain):
                 self.ctx.current_kpoints_distance))
 
     def results(self):
+        """Output the results for the workchain and handles possible faliures."""
         calculation = self.ctx.workchain_bands[self.ctx.iteration - 1]
 
         found = merge_crossing_results(
@@ -560,7 +574,7 @@ class Z2pack3DChernWorkChain(WorkChain):
         self.ctx.radius = self.inputs.sphere_radius.value
 
     def validate_crossings(self):
-        """Check validity of crossings input"""
+        """Check validity of crossings input."""
         if all([key not in self.inputs for key in ['find', 'crossings']]):
             return self.exit_codes.ERROR_INVALID_INPUT_CROSSINGS
 
@@ -581,7 +595,7 @@ class Z2pack3DChernWorkChain(WorkChain):
         self.ctx.crossings = self.inputs.crossings.get_array('crossings')
 
     def run_find_crossings(self):
-        # """Run the FindCrossingsWorkChain to find bands crossings."""
+        """Run the FindCrossingsWorkChain to find bands crossings."""
         inputs = AttributeDict(
             self.exposed_inputs(FindCrossingsWorkChain, namespace='find'))
         inputs.structure = self.ctx.current_structure
@@ -594,7 +608,7 @@ class Z2pack3DChernWorkChain(WorkChain):
         return ToContext(workchain_find=running)
 
     def inspect_find_crossings(self):
-        # """Verify that the FindCrossingsWorkChain finished successfully."""
+        """Verify that the FindCrossingsWorkChain finished successfully."""
         workchain = self.ctx.workchain_find
 
         if not workchain.is_finished_ok:
@@ -619,6 +633,7 @@ class Z2pack3DChernWorkChain(WorkChain):
             return self.exit_codes.ERROR_NO_CROSSINGS_FOUND
 
     def should_do_scf(self):
+        """Determine if the `scf` calculation should be run or use the parent folder given as input."""
         if 'scf_parent_folder' in self.inputs:
             if 'scf' in self.inputs:
                 self.report(
@@ -639,6 +654,7 @@ class Z2pack3DChernWorkChain(WorkChain):
         return True
 
     def run_scf(self):
+        """Run the `scf` calculation."""
         inputs = AttributeDict(
             self.exposed_inputs(PwBaseWorkChain, namespace='scf'))
         inputs.pw.structure = self.ctx.current_structure
@@ -669,6 +685,7 @@ class Z2pack3DChernWorkChain(WorkChain):
         self.ctx.remote_scf = self.ctx.workchain_scf.outputs.remote_folder
 
     def prepare_z2pack(self):
+        """Prepare the inputs for the z2pack calculations."""
         inputs = AttributeDict(
             self.exposed_inputs(Z2packBaseWorkChain, namespace='z2pack_base'))
         inputs.pw_code = self.inputs.pw_code
@@ -680,6 +697,7 @@ class Z2pack3DChernWorkChain(WorkChain):
         self.ctx.max_iteration = len(self.ctx.crossings)
 
     def should_do_alltogheter(self):
+        """Check if the z2pack calculations can be run concurrently."""
         from aiida.schedulers.plugins.direct import DirectScheduler
 
         computer = self.inputs.pw_code.computer
@@ -693,6 +711,7 @@ class Z2pack3DChernWorkChain(WorkChain):
         return not isinstance(scheduler, DirectScheduler) and not symlink
 
     def run_z2pack_all(self):
+        """Launch the z2pack calculations all togheter."""
         old = self.ctx.inputs.z2pack.z2pack_settings.get_dict()
         for cross in self.ctx.crossings:
             old.update({
@@ -724,9 +743,12 @@ class Z2pack3DChernWorkChain(WorkChain):
                 return self.exit_codes.ERROR_SUB_PROCESS_FAILED_Z2PACK
 
     def do_z2pack_one(self):
+        """Loop check for running z2pack calculations 1by1."""
         return self.ctx.iteration < self.ctx.max_iteration
 
     def run_z2pack_one(self):
+        """Launch the z2pack calculations one at a time."""
+        # yapf: disable
         cross = self.ctx.crossings[self.ctx.iteration]
         self.ctx.iteration += 1
 
@@ -735,7 +757,6 @@ class Z2pack3DChernWorkChain(WorkChain):
             'dimension_mode':'3D',
             'invariant':'Chern',
             'surface':'z2pack.shape.Sphere(center=({0[0]:11.7f}, {0[1]:11.7f}, {0[1]:11.7f}), radius={1})'.format(cross, self.ctx.radius)
-            # yapf: disable
             })
         self.ctx.inputs.z2pack.z2pack_settings = orm.Dict(dict=old)
 
@@ -744,22 +765,27 @@ class Z2pack3DChernWorkChain(WorkChain):
         self.report('launching Z2packBaseWorkChain<{}> on center {}'.format(running.pk, cross))
 
         return ToContext(workchain_z2pack=append_(running))
+        # yapf: enable
 
     def inspect_z2pack_one(self):
         """Verify that the FindCrossingsWorkChain finished successfully."""
         workchain = self.ctx.workchain_z2pack[-1]
 
         if not workchain.is_finished_ok:
-            self.report('WARNING: Z2packBaseWorkChain failed with exit status {}'.format(workchain.exit_status))
+            self.report(
+                'WARNING: Z2packBaseWorkChain failed with exit status {}'.
+                format(workchain.exit_status))
             # return self.exit_codes.ERROR_SUB_PROCESS_FAILED_Z2PACK
 
     def results(self):
+        """Output the workchain results."""
         res = merge_chern_results(
             crossings=self.ctx.crossings_node,
-            **{'z2calcOut_{}'.format(n):calc.outputs.output_parameters for n,calc in enumerate(self.ctx.workchain_z2pack)}
-            )
-        
+            **{
+                'z2calcOut_{}'.format(n): calc.outputs.output_parameters
+                for n, calc in enumerate(self.ctx.workchain_z2pack)
+            })
+
         self.out('output_parameters', res)
 
         self.report('FINISHED')
-

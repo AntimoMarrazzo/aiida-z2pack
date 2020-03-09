@@ -1,3 +1,4 @@
+"""Collection of calcfunctions used by the workchains."""
 from __future__ import absolute_import
 import numpy as np
 from itertools import product
@@ -10,10 +11,20 @@ from aiida.common.exceptions import InputValidationError
 
 
 def recipr_base(base):
+    """Generate reciprocal base basis vectors.
+
+    :param base: np.array of basis vectors as rows.
+
+    :return: np.array of reciprocal basis vector as rows.
+    """
     return np.linalg.inv(base).T * 2 * np.pi
 
 
 def get_gap_array_from_PwCalc(calculation):
+    """Get an array containing the difference in energy between valence and conduction bands.
+
+    :param calculation: aiida.orm.CalcJob node of a pw calculation.
+    """
     params = calculation.outputs.output_parameters
 
     n_el = params['number_of_electrons']
@@ -30,11 +41,15 @@ def get_gap_array_from_PwCalc(calculation):
 
 @calcfunction
 def crop_kpoints(structure, kpt_data, centers, radius):
-    """
-    Crop a given set of k-points `kpt_data` that are within a spherical radius `r` from a set of
-    centers `centers`.
+    """Crop a given set of k-points `kpt_data` that are within a spherical radius `r` from a set of centers `centers`.
 
-    :param structure: StructureData used to get the cell of the material
+    :param structure: aiida.orm.StructureData used to get the cell of the material.
+    :param kpt_data: aiida.orm.KpointsData to crop.
+    :param centers: aiida.orm.ArrayData containing an array named `centers`.
+                    Each element of `centers` is used as the center of a spherical cropping.
+    :param radius: radius of the sphere cropping.
+
+    :return: aiida.orm.KpointsData node containing the cropped kpoints
     """
     if not isinstance(structure, orm.StructureData):
         raise InputValidationError(
@@ -83,7 +98,17 @@ def crop_kpoints(structure, kpt_data, centers, radius):
 
 @calcfunction
 def generate_cubic_grid(structure, centers, distance, dim):
-    """Generate cubic grids centered in `centers` spanning 7 point per dimension."""
+    """Generate a cubic grids centered in `centers` of size `distance` and dimensionality `dim`.
+
+    :param structure: aiida.orm.StructureData node  used to get the cell of the material.
+    :param centers: aiida.orm.ArrayData containing an array named `centers`.
+                    Each element of `centers` is used to generate a cubic grid around it.
+    :param distance: aiida.orm.Float indicating the lateral size of the cubic grid.
+    :param dim: aiida.orm.Int determining the dimensionality of the grid.
+                e.g.: dim=1 -> 5x1x1   dim = 2 -> 5x5x1   dim = 3 -> 5x5x5
+
+    :return: aiida.orm.KpointsData containing the generated grids.
+    """
     if not isinstance(structure, orm.StructureData):
         raise InputValidationError(
             'Invalide type {} for parameter `structure`'.format(
@@ -134,6 +159,7 @@ def generate_cubic_grid(structure, centers, distance, dim):
 
 @calcfunction
 def get_crossing_and_lowgap_points(bands_data, gap_threshold):
+    """Extract the low-gap points and crossings from the output of a `bands` calculation."""
     if not isinstance(bands_data, orm.BandsData):
         raise InputValidationError(
             'Invalide type {} for parameter `bands_data`'.format(
@@ -214,6 +240,7 @@ def get_crossing_and_lowgap_points(bands_data, gap_threshold):
 
 @calcfunction
 def get_el_info(params):
+    """Extract the information about the number of electron and conduction and valence band indexes from the output of a pw calculation."""
     if not isinstance(params, orm.Dict):
         raise InputValidationError(
             'Invalide type {} for parameter `params`'.format(type(params)))
@@ -231,6 +258,7 @@ def get_el_info(params):
 
 @calcfunction
 def get_kpoint_grid_dimensionality(kpt_data):
+    """Get the dimensionality of a k-point grid. If failed, assumes 3D."""
     if not isinstance(kpt_data, orm.KpointsData):
         raise InputValidationError(
             'Invalide type {} for parameter `kpt_data`'.format(type(kpt_data)))
@@ -247,6 +275,7 @@ def get_kpoint_grid_dimensionality(kpt_data):
 
 @calcfunction
 def merge_crossing_results(**kwargs):
+    """Merge the results of multiple call of `get_crossing_and_lowgap_points`."""
     structure = kwargs.pop('structure')
     cell = structure.cell
     recipr = recipr_base(cell)
@@ -283,6 +312,7 @@ def merge_crossing_results(**kwargs):
 
 @calcfunction
 def merge_chern_results(**kwargs):
+    """Merge the results of multiple calls of `Z2packBaseWorkChain`."""
     crossings = kwargs.pop('crossings')
     crossings = crossings.get_array('crossings')
 

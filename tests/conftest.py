@@ -227,7 +227,7 @@ def generate_remote_data():
                     to_link = Dict(dict=to_link)
                 to_link.store()
                 creator.add_incoming(to_link, link_type=LinkType.INPUT_CALC, link_label=extra[1])
-                
+
             creator.store()
 
         return remote

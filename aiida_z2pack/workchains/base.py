@@ -1,3 +1,4 @@
+"""`Z2packBaseWorkChain` workchains definition."""
 from __future__ import absolute_import
 from aiida import orm
 from aiida.common import AttributeDict
@@ -18,7 +19,7 @@ PwBaseWorkChain = WorkflowFactory('quantumespresso.pw.base')
 
 
 class Z2packBaseWorkChain(BaseRestartWorkChain):
-    """Workchain to run a basic z2pack calculation, starting from the scf."""
+    """Workchain to run a basic z2pack calculation, starting from the `scf` calculation."""
 
     _calculation_class = Z2packCalculation
 
@@ -112,6 +113,7 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
         # yapf: enable
 
     def setup(self):
+        """Perform intial setup of the workchain."""
         super().setup()
 
         try:
@@ -124,6 +126,7 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
         self.ctx.MND_scale_factor = self.inputs.min_neighbour_distance_scale_factor.value
 
     def should_do_scf(self):
+        """Check if the `scf` calculation should be performed or the parent folder should be taken from the inputs."""
         if 'parent_folder' in self.inputs:
             if 'scf' in self.inputs:
                 self.report(
@@ -137,6 +140,7 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
         return True
 
     def run_scf(self):
+        """Run the `scf` calculation."""
         inputs = AttributeDict(
             self.exposed_inputs(PwBaseWorkChain, namespace='scf'))
         inputs.pw.structure = self.inputs.structure
@@ -163,6 +167,7 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
 
     def should_run_calculation(self):
         """Return whether a new calculation should be run.
+
         Same behaviour as the BaseRestartWorkChain from the qe plugin.
         Also stop the iterations if the `min_neighbour_distance` convergence parameter drops below the set
         threshold level.
@@ -171,6 +176,7 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
         ) and self.ctx.current_MND >= self.ctx.MND_threshold
 
     def setup_z2pack(self):
+        """Prepare the inputs for the z2pack CalcJob."""
         inputs = AttributeDict(self.exposed_inputs(Z2packCalculation,
                                                    'z2pack'))
         inputs.pw_code = self.inputs.pw_code
@@ -189,6 +195,7 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
         self.ctx.inputs = inputs
 
     def prepare_calculation(self):
+        """Prepare the inputs for a loop restart calculation."""
         self.ctx.inputs.z2pack_settings[
             'min_neighbour_dist'] = self.ctx.current_MND
         if self.ctx.iteration > 0:
@@ -200,6 +207,7 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
             self.ctx.inputs.parent_folder = remote
 
     def inspect_calculation(self):
+        """Check the outputs of the calculation."""
         self.ctx.inputs.z2pack_settings['restart_mode'] = True
 
         return super().inspect_calculation()
@@ -211,6 +219,7 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
     #     self.out('output_parameters', final_calc.outputs.output_parameters)
 
     def _autoset_wannier90_paremters(self):
+        """If not given, set the number of wannier functions and band as all the bands up to the valence one. Ignore the rest."""
         self.report(
             'Required w90 parameters are missing. Guessing them from the output of the scf calculation.'
         )
@@ -269,6 +278,7 @@ def _handle_unrecoverable_failure(self, calculation):
 
 @register_error_handler(Z2packBaseWorkChain, 590)
 def _handle_out_of_walltime(self, calculation):
+    """Handle calculation that did not finish because the walltime was exceeded."""
     if calculation.exit_status == Z2packCalculation.exit_codes.ERROR_MISSING_RESULTS_FILE.status:
         self.report_error_handled(
             calculation,
@@ -278,6 +288,7 @@ def _handle_out_of_walltime(self, calculation):
 
 @register_error_handler(Z2packBaseWorkChain, 580)
 def _handle_no_save_file(self, calculation):
+    """Try to relaunch calculation that did not produce a save file once. Exit if it fails twice."""
     if calculation.exit_status == Z2packCalculation.exit_codes.ERROR_MISSING_SAVE_FILE.status:
         if not 'restart_no_save' in self.ctx:
             self.ctx.restart_no_save = True
@@ -298,6 +309,7 @@ def _handle_no_save_file(self, calculation):
 
 @register_error_handler(Z2packBaseWorkChain, 570)
 def _handle_failed(self, calculation):
+    """Handle calculation that did not produce an output."""
     try:
         calculation.outputs.output_parameters
     except:
@@ -307,6 +319,7 @@ def _handle_failed(self, calculation):
 
 @register_error_handler(Z2packBaseWorkChain, 560)
 def _handle_not_converged(self, calculation):
+    """Lower threshold and restart calculation that finished ok, but did not reach convergence because of min threshold parameters."""
     # try:
     #     settings = calculation.inputs.z2pack.z2pack_settings
     # except:
