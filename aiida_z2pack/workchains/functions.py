@@ -5,6 +5,7 @@ from sklearn.cluster import AgglomerativeClustering
 
 from aiida import orm
 from aiida.engine import calcfunction
+from aiida.common.exceptions import InputValidationError
 
 def recipr_base(base):
     return np.linalg.inv(base).T * 2 * np.pi
@@ -32,16 +33,16 @@ def crop_kpoints(structure, kpt_data, centers, radius):
     :param structure: StructureData used to get the cell of the material
     """
     if not isinstance(structure, orm.StructureData):
-        raise ValueError("Invalide type {} for parameter `structure`".format(type(structure)))
+        raise InputValidationError("Invalide type {} for parameter `structure`".format(type(structure)))
     if not isinstance(kpt_data, orm.KpointsData):
-        raise ValueError("Invalide type {} for parameter `kpt_data`".format(type(kpt_data)))
+        raise InputValidationError("Invalide type {} for parameter `kpt_data`".format(type(kpt_data)))
     if not isinstance(centers, orm.ArrayData):
-        raise ValueError("Invalide type {} for parameter `centers`".format(type(centers)))
+        raise InputValidationError("Invalide type {} for parameter `centers`".format(type(centers)))
     if not isinstance(radius, orm.Float):
-        raise ValueError("Invalide type {} for parameter `radius`".format(type(radius)))
+        raise InputValidationError("Invalide type {} for parameter `radius`".format(type(radius)))
     centers = centers.get_array('centers')
     if len(centers.shape) != 2 or centers.shape[1] != 3:
-        raise ValueError("Invalide shape {} for array `centers`. Expected (*,3)".format(centers.shape))
+        raise InputValidationError("Invalide shape {} for array `centers`. Expected (*,3)".format(centers.shape))
     
     r         = radius.value
     cell      = np.array(structure.cell)
@@ -72,11 +73,11 @@ def crop_kpoints(structure, kpt_data, centers, radius):
 def generate_cubic_grid(structure, centers, distance, dim):
     """Generate cubic grids centered in `centers` spanning 7 point per dimension."""
     if not isinstance(structure, orm.StructureData):
-        raise ValueError("Invalide type {} for parameter `structure`".format(type(structure)))
+        raise InputValidationError("Invalide type {} for parameter `structure`".format(type(structure)))
     if not isinstance(centers, orm.ArrayData):
-        raise ValueError("Invalide type {} for parameter `centers`".format(type(centers)))
+        raise InputValidationError("Invalide type {} for parameter `centers`".format(type(centers)))
     if not isinstance(distance, orm.Float):
-        raise ValueError("Invalide type {} for parameter `distance`".format(type(distance)))
+        raise InputValidationError("Invalide type {} for parameter `distance`".format(type(distance)))
 
     npoints = 5
 
@@ -115,9 +116,9 @@ def generate_cubic_grid(structure, centers, distance, dim):
 @calcfunction
 def get_crossing_and_lowgap_points(bands_data, gap_threshold):
     if not isinstance(bands_data, orm.BandsData):
-        raise ValueError("Invalide type {} for parameter `bands_data`".format(type(bands_data)))
+        raise InputValidationError("Invalide type {} for parameter `bands_data`".format(type(bands_data)))
     if not isinstance(gap_threshold, orm.Float):
-        raise ValueError("Invalide type {} for parameter `gap_threshold`".format(type(gap_threshold)))
+        raise InputValidationError("Invalide type {} for parameter `gap_threshold`".format(type(gap_threshold)))
 
     calculation = bands_data.creator
     gaps = get_gap_array_from_PwCalc(calculation)
@@ -189,7 +190,7 @@ def get_crossing_and_lowgap_points(bands_data, gap_threshold):
 @calcfunction
 def get_el_info(params):
     if not isinstance(params, orm.Dict):
-        raise ValueError("Invalide type {} for parameter `params`".format(type(params)))
+        raise InputValidationError("Invalide type {} for parameter `params`".format(type(params)))
 
     res = {}
     n_el = params['number_of_electrons']
@@ -204,7 +205,7 @@ def get_el_info(params):
 @calcfunction
 def get_kpoint_grid_dimensionality(kpt_data):
     if not isinstance(kpt_data, orm.KpointsData):
-        raise ValueError("Invalide type {} for parameter `kpt_data`".format(type(kpt_data)))
+        raise InputValidationError("Invalide type {} for parameter `kpt_data`".format(type(kpt_data)))
 
     try:
         mesh = kpt_data.get_kpoints_mesh()[0]
