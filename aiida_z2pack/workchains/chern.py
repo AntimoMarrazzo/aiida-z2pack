@@ -157,11 +157,11 @@ class FindCrossingsWorkChain(WorkChain):
             )
 
         # ERRORS ############################################################################
-        spec.exit_code(112, 'ERROR_SUB_PROCESS_FAILED_RELAX',
+        spec.exit_code(312, 'ERROR_SUB_PROCESS_FAILED_RELAX',
             message='the relax PwRelaxWorkChain sub process failed')
-        spec.exit_code(122, 'ERROR_SUB_PROCESS_FAILED_SCF',
+        spec.exit_code(322, 'ERROR_SUB_PROCESS_FAILED_SCF',
             message='the scf PwBaseWorkChain sub process failed')
-        spec.exit_code(132, 'ERROR_SUB_PROCESS_FAILED_BANDS',
+        spec.exit_code(332, 'ERROR_SUB_PROCESS_FAILED_BANDS',
             message='the bands PwBaseWorkChain sub process failed')
 
     def setup(self):
@@ -523,15 +523,15 @@ class Z2pack3DChernWorkChain(WorkChain):
             )
 
         # ERRORS ############################################################################
-        spec.exit_code(113, 'ERROR_SUB_PROCESS_FAILED_FINDCROSSING',
+        spec.exit_code(313, 'ERROR_SUB_PROCESS_FAILED_FINDCROSSING',
             message='the FindCrossingsWorkChain sub process failed')
-        spec.exit_code(123, 'ERROR_SUB_PROCESS_FAILED_Z2PACK',
+        spec.exit_code(323, 'ERROR_SUB_PROCESS_FAILED_Z2PACK',
             message='the Z2packBaseWorkChain sub process failed')
-        spec.exit_code(133, 'ERROR_INVALID_INPUT_CROSSINGS',
+        spec.exit_code(333, 'ERROR_INVALID_INPUT_CROSSINGS',
             message='Must provide either `find` namelist or `crossings` ArrayData as input.')
-        spec.exit_code(143, 'ERROR_INVALID_INPUT_SCF_Z2PACK',
+        spec.exit_code(343, 'ERROR_INVALID_INPUT_SCF_Z2PACK',
             message='If `crossings` is given, must also specify `scf_parent_folder` or `z2pack.scf`.')
-        spec.exit_code(203, 'ERROR_NO_CROSSINGS_FOUND',
+        spec.exit_code(403, 'ERROR_NO_CROSSINGS_FOUND',
             message='No crossings were found.')
 
     def setup(self):
