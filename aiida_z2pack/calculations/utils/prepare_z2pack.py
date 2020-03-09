@@ -22,7 +22,7 @@ def prepare_z2pack(cls, folder):
     except:
         raise exceptions.InputValidationError('No settings specified for this calculation')
 
-    if not 'npools' in settings_dict:
+    if 'npools' not in settings_dict:
         pools_cmd = ''
     else:
         npools = settings_dict['npools']

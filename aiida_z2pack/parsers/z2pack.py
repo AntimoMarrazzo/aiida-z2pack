@@ -23,11 +23,11 @@ class Z2packParser(Parser):
         retrieved_names = out_folder.list_object_names()
 
         # Missing required files
-        if not pc._OUTPUT_Z2PACK_FILE in retrieved_names:
+        if pc._OUTPUT_Z2PACK_FILE not in retrieved_names:
             return self.exit(self.exit_codes.ERROR_OUTPUT_FILES)
-        if not pc._OUTPUT_SAVE_FILE in retrieved_names:
+        if pc._OUTPUT_SAVE_FILE not in retrieved_names:
             return self.exit(self.exit_codes.ERROR_MISSING_SAVE_FILE)
-        if not pc._OUTPUT_RESULT_FILE in retrieved_names:
+        if pc._OUTPUT_RESULT_FILE not in retrieved_names:
             return self.exit(self.exit_codes.ERROR_MISSING_RESULTS_FILE)
 
         # Checks for presence of error files

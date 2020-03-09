@@ -211,7 +211,7 @@ class FindCrossingsWorkChain(WorkChain):
 
     def should_do_scf(self):
         """Determine if the scf calculaiton should be run."""
-        return not 'parent_folder' in self.inputs
+        return 'parent_folder' not in self.inputs
 
     def set_remote_scf(self):
         """Set parent folder from input."""
@@ -580,7 +580,7 @@ class Z2pack3DChernWorkChain(WorkChain):
 
     def should_do_find_crossings(self):
         """If the 'find' input namespace was specified and `crossings` is not set, then try to find band crossings."""
-        return not 'crossings' in self.inputs and 'find' in self.inputs
+        return 'crossings' not in self.inputs and 'find' in self.inputs
 
     def set_crossings_from_input(self):
         """Set crossings from given input. Ignore `find` namelist."""

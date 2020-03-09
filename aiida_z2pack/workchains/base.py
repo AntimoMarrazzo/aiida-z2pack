@@ -183,11 +183,11 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
         inputs.parent_folder = self.ctx.parent_folder
         inputs.z2pack_settings = inputs.z2pack_settings.get_dict()
 
-        if not 'wannier90_parameters' in inputs:
+        if 'wannier90_parameters' not in inputs:
             inputs.wannier90_parameters = self._autoset_wannier90_paremters()
         else:
             params = inputs.wannier90_parameters.get_dict()
-            if any(not var in params
+            if any(var not in params
                    for var in ['num_wann', 'num_bands', 'exclude_bands']):
                 inputs.wannier90_parameters = self._autoset_wannier90_paremters(
                 )
@@ -290,7 +290,7 @@ def _handle_out_of_walltime(self, calculation):
 def _handle_no_save_file(self, calculation):
     """Try to relaunch calculation that did not produce a save file once. Exit if it fails twice."""
     if calculation.exit_status == Z2packCalculation.exit_codes.ERROR_MISSING_SAVE_FILE.status:
-        if not 'restart_no_save' in self.ctx:
+        if 'restart_no_save' not in self.ctx:
             self.ctx.restart_no_save = True
             self.ctx.inputs.z2pack_settings['restart_mode'] = False
             self.report_error_handled(
