@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import absolute_import
 import os
 import six
 
@@ -14,44 +15,45 @@ from aiida_quantumespresso.calculations import _lowercase_dict
 
 PwCalculation = CalculationFactory('quantumespresso.pw')
 
+
 class Z2packCalculation(CalcJob):
     """
     Plugin for Z2pack, a code for computing topological invariants.
     See http://z2pack.ethz.ch/ for more details
     """
     _PSEUDO_SUBFOLDER = './pseudo/'
-    _PREFIX              = 'aiida'
-    _SEEDNAME            = 'aiida'
+    _PREFIX = 'aiida'
+    _SEEDNAME = 'aiida'
 
-    _INPUT_SUBFOLDER     = "./out/" #Still used by some workchains?
-    _OUTPUT_SUBFOLDER    = "./out/"
+    _INPUT_SUBFOLDER = './out/'  #Still used by some workchains?
+    _OUTPUT_SUBFOLDER = './out/'
 
-    _INPUT_PW_SCF_FILE   = 'aiida.scf.in'
-    _OUTPUT_PW_SCF_FILE  = 'aiida.scf.out'
+    _INPUT_PW_SCF_FILE = 'aiida.scf.in'
+    _OUTPUT_PW_SCF_FILE = 'aiida.scf.out'
 
-    _INPUT_PW_NSCF_FILE  = 'aiida.nscf.in'
+    _INPUT_PW_NSCF_FILE = 'aiida.nscf.in'
     _OUTPUT_PW_NSCF_FILE = 'aiida.nscf.out'
 
-    _INPUT_Z2PACK_FILE   = 'z2pack_aiida.py'
-    _OUTPUT_Z2PACK_FILE  = 'z2pack_aiida.out'
-    _OUTPUT_SAVE_FILE    = 'save.json'
-    _OUTPUT_RESULT_FILE  = 'results.json'
+    _INPUT_Z2PACK_FILE = 'z2pack_aiida.py'
+    _OUTPUT_Z2PACK_FILE = 'z2pack_aiida.out'
+    _OUTPUT_SAVE_FILE = 'save.json'
+    _OUTPUT_RESULT_FILE = 'results.json'
 
-    _INPUT_W90_FILE      = _SEEDNAME + '.win'
-    _OUTPUT_W90_FILE     = _SEEDNAME + '.wout'
+    _INPUT_W90_FILE = _SEEDNAME + '.win'
+    _OUTPUT_W90_FILE = _SEEDNAME + '.wout'
 
-    _INPUT_OVERLAP_FILE  = 'aiida.pw2wan.in'
+    _INPUT_OVERLAP_FILE = 'aiida.pw2wan.in'
     _OUTPUT_OVERLAP_FILE = 'aiida.pw2wan.out'
 
-    _ERROR_W90_FILE      = _SEEDNAME + '.werr'
-    _ERROR_PW_FILE       = 'CRASH'
+    _ERROR_W90_FILE = _SEEDNAME + '.werr'
+    _ERROR_PW_FILE = 'CRASH'
 
     _DEFAULT_MIN_NEIGHBOUR_DISTANCE = 0.01
-    _DEFAULT_NUM_LINES              = 11
-    _DEFAULT_ITERATOR               = 'range(8, 41, 2)'
-    _DEFAULT_GAP_TOLERANCE  = 0.3
+    _DEFAULT_NUM_LINES = 11
+    _DEFAULT_ITERATOR = 'range(8, 41, 2)'
+    _DEFAULT_GAP_TOLERANCE = 0.3
     _DEFAULT_MOVE_TOLERANCE = 0.3
-    _DEFAULT_POS_TOLERANCE  = 0.01
+    _DEFAULT_POS_TOLERANCE = 0.01
 
     _blocked_keywords_pw = PwCalculation._blocked_keywords
     _blocked_keywords_overlap = [
@@ -60,16 +62,17 @@ class Z2packCalculation(CalcJob):
         ('INPUTPP', 'seedname', _SEEDNAME),
         ('INPUTPP', 'write_amn', False),
         ('INPUTPP', 'write_mmn', True),
-        ]
+    ]
     _blocked_keywords_wannier90 = [
-        ('length_unit','ang'),
+        ('length_unit', 'ang'),
         ('spinors', True),
         ('num_iter', 0),
         ('use_bloch_phases', True),
-        ]
+    ]
 
     @classmethod
     def define(cls, spec):
+        # yapf: disable
         super(Z2packCalculation, cls).define(spec)
 
         # INPUTS ###########################################################################
@@ -102,7 +105,7 @@ class Z2packCalculation(CalcJob):
             help='Use an additional node for special settings.'
             )
         spec.input(
-            'z2pack_settings', valid_type=orm.Dict, 
+            'z2pack_settings', valid_type=orm.Dict,
             required=False,
             help='Use an additional node for special settings.'
             )
@@ -118,12 +121,12 @@ class Z2packCalculation(CalcJob):
             help='Overlap code to be used by z2pack.'
             )
         spec.input(
-            'wannier90_code', valid_type=orm.Code, 
+            'wannier90_code', valid_type=orm.Code,
             required=False,
             help='Wannier code to be used by z2pack.'
             )
         spec.input(
-            'code', valid_type=orm.Code, 
+            'code', valid_type=orm.Code,
             required=False,
             help='Z2pack code.'
             )
@@ -179,11 +182,12 @@ class Z2packCalculation(CalcJob):
             410, 'ERROR_MISSING_SAVE_FILE',
             message='The save file `{}` is missing.'.format(cls._OUTPUT_SAVE_FILE)
             )
+        # yapf: enable
 
     def prepare_for_submission(self, folder):
-        self.inputs.metadata.options.parser_name     = 'z2pack.z2pack'
+        self.inputs.metadata.options.parser_name = 'z2pack.z2pack'
         self.inputs.metadata.options.output_filename = self._OUTPUT_Z2PACK_FILE
-        self.inputs.metadata.options.input_filename  = self._INPUT_Z2PACK_FILE
+        self.inputs.metadata.options.input_filename = self._INPUT_Z2PACK_FILE
 
         if not 'overlap_parameters' in self.inputs:
             self.inputs.overlap_parameters = orm.Dict(dict={})
@@ -192,49 +196,52 @@ class Z2packCalculation(CalcJob):
 
         codeinfo = datastructures.CodeInfo()
         codeinfo.stdout_name = self._OUTPUT_Z2PACK_FILE
-        codeinfo.stdin_name  = self._INPUT_Z2PACK_FILE
-        codeinfo.code_uuid   = self.inputs.code.uuid
-        calcinfo.codes_info  = [codeinfo]
+        codeinfo.stdin_name = self._INPUT_Z2PACK_FILE
+        codeinfo.code_uuid = self.inputs.code.uuid
+        calcinfo.codes_info = [codeinfo]
 
         calcinfo.codes_run_mode = datastructures.CodeRunMode.SERIAL
         calcinfo.cmdline_params = []
 
-        calcinfo.retrieve_list           = []
+        calcinfo.retrieve_list = []
         calcinfo.retrieve_temporary_list = []
-        calcinfo.local_copy_list         = []
-        calcinfo.remote_copy_list        = []
-        calcinfo.remote_symlink_list     = []
+        calcinfo.local_copy_list = []
+        calcinfo.remote_copy_list = []
+        calcinfo.remote_symlink_list = []
 
-        inputs  = [
+        inputs = [
             self._INPUT_PW_NSCF_FILE,
             self._INPUT_OVERLAP_FILE,
             self._INPUT_W90_FILE,
-            ] 
+        ]
         outputs = [
             self._OUTPUT_Z2PACK_FILE,
             self._OUTPUT_SAVE_FILE,
             self._OUTPUT_RESULT_FILE,
-            ]
+        ]
         errors = [
-            os.path.join('build', a) for a in [self._ERROR_W90_FILE, self._ERROR_PW_FILE]
-            ]
+            os.path.join('build', a)
+            for a in [self._ERROR_W90_FILE, self._ERROR_PW_FILE]
+        ]
 
         calcinfo.retrieve_list.extend(outputs)
         calcinfo.retrieve_list.extend(errors)
 
         parent = self.inputs.parent_folder
-        rpath  = parent.get_remote_path()
-        uuid   = parent.computer.uuid
+        rpath = parent.get_remote_path()
+        uuid = parent.computer.uuid
         parent_type = parent.creator.process_class
 
         if parent_type == Z2packCalculation:
             self._set_inputs_from_parent_z2pack()
 
         try:
-            settings = _lowercase_dict(self.inputs.z2pack_settings.get_dict(), 'z2pack_settings')
+            settings = _lowercase_dict(self.inputs.z2pack_settings.get_dict(),
+                                       'z2pack_settings')
         except AttributeError:
-            raise exceptions.InputValidationError('Must provide `z2pack_settings` input for `scf` calculation.')
-        symlink  = settings.get('parent_folder_symlink', False)
+            raise exceptions.InputValidationError(
+                'Must provide `z2pack_settings` input for `scf` calculation.')
+        symlink = settings.get('parent_folder_symlink', False)
         self.restart_mode = settings.get('restart_mode', True)
         ptr = calcinfo.remote_symlink_list if symlink else calcinfo.remote_copy_list
 
@@ -283,6 +290,7 @@ class Z2packCalculation(CalcJob):
             self,
             ('pw_parameters', 'parameters'),
             ('pw_settings', 'settings')
+            # yapf: disable
             )
 
     def _set_inputs_from_parent_z2pack(self):
@@ -304,6 +312,7 @@ class Z2packCalculation(CalcJob):
             'wannier90_parameters',
             'pw_settings',
             'z2pack_settings'
+            # yapf: disable
             )
        
     def use_parent_calculation(self, calc):

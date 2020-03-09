@@ -81,8 +81,10 @@ def prepare_z2pack(cls, folder):
         nscf_cmd + pools_cmd + ' < ' + cls._INPUT_PW_NSCF_FILE + ' >& ' + cls._OUTPUT_PW_NSCF_FILE + ";' +\n    '" +
         overlap_cmd + ' < ' + cls._INPUT_OVERLAP_FILE + '  >& ' + cls._OUTPUT_OVERLAP_FILE + ";'\n" +
         ")"
+        # yapf: disable
         )
 
+    # yapf: disable
     input_file_lines.append("")
     input_file_lines.append('z2cmd =' +  z2cmd)
 
@@ -97,37 +99,48 @@ def prepare_z2pack(cls, folder):
     input_file_lines.append('    kpt_path    = ' + str([cls._INPUT_PW_NSCF_FILE, cls._INPUT_W90_FILE]) + ',')
     input_file_lines.append('    command     = z2cmd,')
     input_file_lines.append("    executable  = '/bin/bash',")
-    input_file_lines.append("    mmn_path    = '{}.mmn'".format(cls._SEEDNAME))            
-    input_file_lines.append(")")
+    input_file_lines.append("    mmn_path    = '{}.mmn'".format(cls._SEEDNAME))
+    input_file_lines.append(')')
 
-    input_file_lines.append("")   
-    input_file_lines.append("gap_check={}")
-    input_file_lines.append("move_check={}")
-    input_file_lines.append("pos_check={}")
+    input_file_lines.append('')
+    input_file_lines.append('gap_check={}')
+    input_file_lines.append('move_check={}')
+    input_file_lines.append('pos_check={}')
     input_file_lines.append(
         "res_dict={'convergence_report':{'GapCheck':{}, 'MoveCheck':{}, 'PosCheck':{}}, 'invariant':{}}"
         )
+    # yapf: enable
 
-    input_file_lines.append("")
-    if prepend_code!='':
-        input_file_lines.append("\t"+prepend_code)
-    if dim_mode=='2D' or dim_mode=='3D':       
+    input_file_lines.append('')
+    if prepend_code != '':
+        input_file_lines.append('\t' + prepend_code)
+    if dim_mode == '2D' or dim_mode == '3D':
         input_file_lines.append('result = z2pack.surface.run(')
         input_file_lines.append('    system             = system,')
-        if dim_mode=='2D':
-            if invariant=='Z2':
-                input_file_lines.append('    surface            = lambda t1,t2: [t2, t1/2, 0],')
-            elif invariant=='Chern':
-                input_file_lines.append('    surface            = lambda t1,t2: [t1, t2, 0],')
-        elif dim_mode=='3D':
-            input_file_lines.append('    surface            = ' + surface + ',')
-        input_file_lines.append('    pos_tol            = ' + str(pos_tol) + ',')
-        input_file_lines.append('    gap_tol            = ' + str(gap_tol) + ',')
-        input_file_lines.append('    move_tol           = ' + str(move_tol) + ',')
-        input_file_lines.append('    num_lines          = ' + str(num_lines) + ',')
-        input_file_lines.append('    min_neighbour_dist = ' + str(min_neighbour_dist) + ',')
-        input_file_lines.append('    iterator           = ' + str(iterator) + ',')
-        input_file_lines.append('    save_file          = ' + "'"+cls._OUTPUT_SAVE_FILE +"'" + ',')
+        if dim_mode == '2D':
+            if invariant == 'Z2':
+                input_file_lines.append(
+                    '    surface            = lambda t1,t2: [t2, t1/2, 0],')
+            elif invariant == 'Chern':
+                input_file_lines.append(
+                    '    surface            = lambda t1,t2: [t1, t2, 0],')
+        elif dim_mode == '3D':
+            input_file_lines.append('    surface            = ' + surface +
+                                    ',')
+        input_file_lines.append('    pos_tol            = ' + str(pos_tol) +
+                                ',')
+        input_file_lines.append('    gap_tol            = ' + str(gap_tol) +
+                                ',')
+        input_file_lines.append('    move_tol           = ' + str(move_tol) +
+                                ',')
+        input_file_lines.append('    num_lines          = ' + str(num_lines) +
+                                ',')
+        input_file_lines.append('    min_neighbour_dist = ' +
+                                str(min_neighbour_dist) + ',')
+        input_file_lines.append('    iterator           = ' + str(iterator) +
+                                ',')
+        input_file_lines.append('    save_file          = ' + "'" +
+                                cls._OUTPUT_SAVE_FILE + "'" + ',')
         if cls.restart_mode:
             input_file_lines.append('    load               = True')
         input_file_lines.append('    )')
@@ -137,37 +150,50 @@ def prepare_z2pack(cls, folder):
             input_file_lines.append("res_dict['invariant'].update({'Z2':Z2})")
         elif invariant.lower() == 'chern':
             input_file_lines.append('Chern = z2pack.invariant.chern(result)')
-            input_file_lines.append("res_dict['invariant'].update({'Chern':Chern})")
+            input_file_lines.append(
+                "res_dict['invariant'].update({'Chern':Chern})")
     else:
-        raise exceptions.InputValidationError("Only dimension_mode 2D and 3D are currently implemented.")
-    
-    input_file_lines.append("")
-    input_file_lines.append("gap_check['PASSED']  = "
-                            "result.convergence_report['surface']['GapCheck']['PASSED']")
-    input_file_lines.append("gap_check['FAILED']  = "
-                            "result.convergence_report['surface']['GapCheck']['FAILED']")
-    input_file_lines.append("move_check['PASSED'] = "
-                            "result.convergence_report['surface']['MoveCheck']['PASSED']")
-    input_file_lines.append("move_check['FAILED'] = "
-                            "result.convergence_report['surface']['MoveCheck']['FAILED']")
-    input_file_lines.append("pos_check['PASSED']  = "
-                            "result.convergence_report['line']['PosCheck']['PASSED']")
-    input_file_lines.append("pos_check['FAILED']  = "
-                            "result.convergence_report['line']['PosCheck']['FAILED']")
-    input_file_lines.append("pos_check['MISSING'] = "
-                            "result.convergence_report['line']['PosCheck']['MISSING']")
+        raise exceptions.InputValidationError(
+            'Only dimension_mode 2D and 3D are currently implemented.')
 
-    input_file_lines.append("")
-    input_file_lines.append("res_dict['convergence_report']['GapCheck'].update(gap_check)")
-    input_file_lines.append("res_dict['convergence_report']['MoveCheck'].update(move_check)")
-    input_file_lines.append("res_dict['convergence_report']['PosCheck'].update(pos_check)")  
-    
-    input_file_lines.append("")
-    input_file_lines.append("with open('" + cls._OUTPUT_RESULT_FILE + "', 'w') as fp:")
-    input_file_lines.append("    json.dump(res_dict, fp)")
-    input_file_lines.append("")
-    input_file_lines.append("")
-    input_file_lines.append("")
+    input_file_lines.append('')
+    input_file_lines.append(
+        "gap_check['PASSED']  = "
+        "result.convergence_report['surface']['GapCheck']['PASSED']")
+    input_file_lines.append(
+        "gap_check['FAILED']  = "
+        "result.convergence_report['surface']['GapCheck']['FAILED']")
+    input_file_lines.append(
+        "move_check['PASSED'] = "
+        "result.convergence_report['surface']['MoveCheck']['PASSED']")
+    input_file_lines.append(
+        "move_check['FAILED'] = "
+        "result.convergence_report['surface']['MoveCheck']['FAILED']")
+    input_file_lines.append(
+        "pos_check['PASSED']  = "
+        "result.convergence_report['line']['PosCheck']['PASSED']")
+    input_file_lines.append(
+        "pos_check['FAILED']  = "
+        "result.convergence_report['line']['PosCheck']['FAILED']")
+    input_file_lines.append(
+        "pos_check['MISSING'] = "
+        "result.convergence_report['line']['PosCheck']['MISSING']")
+
+    input_file_lines.append('')
+    input_file_lines.append(
+        "res_dict['convergence_report']['GapCheck'].update(gap_check)")
+    input_file_lines.append(
+        "res_dict['convergence_report']['MoveCheck'].update(move_check)")
+    input_file_lines.append(
+        "res_dict['convergence_report']['PosCheck'].update(pos_check)")
+
+    input_file_lines.append('')
+    input_file_lines.append("with open('" + cls._OUTPUT_RESULT_FILE +
+                            "', 'w') as fp:")
+    input_file_lines.append('    json.dump(res_dict, fp)')
+    input_file_lines.append('')
+    input_file_lines.append('')
+    input_file_lines.append('')
     with open(input_filename, 'w') as file_input:
-        file_input.write( "\n".join(input_file_lines) )
-        file_input.write( "\n" )
+        file_input.write('\n'.join(input_file_lines))
+        file_input.write('\n')

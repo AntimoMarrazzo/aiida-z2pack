@@ -7,6 +7,10 @@
         tests/.*(?<!\.py)$
       )$
   - id: double-quote-string-fixer
+    exclude:
+      (?x)^(
+        topologicalworkflows/*|
+      )$
 
 - repo: https://github.com/PyCQA/pydocstyle
   rev: 4.0.1
@@ -19,6 +23,7 @@
       (?x)^(
         aiida_z2pack/calculations.*|
         aiida_z2pack/parsers/.*|
+        topologicalworkflows/*|
         docs/.*|
         utils/.*
       )$
@@ -36,6 +41,8 @@
       (?x)^(
         aiida_z2pack/calculations/pwimmigrant.*|
         aiida_z2pack/parsers/.*|
+        topologicalworkflows/*|
+        tests/*|
         docs/.*|
         tests/.*(?<!\.py)$
       )$
@@ -43,7 +50,10 @@
   - id: prospector
     language: system
     types: [file, python]
-    exclude: *exclude_files
+    exclude:
+      (?x)^(
+        tests/*
+      )$
     name: prospector
     description: 'This hook runs Prospector: https://github.com/landscapeio/prospector'
     entry: prospector

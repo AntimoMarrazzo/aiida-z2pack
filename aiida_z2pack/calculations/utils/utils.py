@@ -1,12 +1,14 @@
+from __future__ import absolute_import
 from aiida import orm
 from aiida.plugins import CalculationFactory
 
 PwCalculation = CalculationFactory('quantumespresso.pw')
 
+
 def deep_copy(old):
     """Copy nested dictionaries."""
     res = {}
-    for k,v in old.items():
+    for k, v in old.items():
         if not isinstance(v, dict):
             res[k] = v
         else:
@@ -14,18 +16,20 @@ def deep_copy(old):
 
     return res
 
+
 def deep_update(old, new, overwrite=True):
     """Update nested dictionaries"""
     if not overwrite:
         res = deep_copy(old)
     else:
         res = old
-    for k,v in new.items():
+    for k, v in new.items():
         if isinstance(v, dict) and k in res and isinstance(res[k], dict):
             deep_update(res[k], v)
         else:
-            res[k] = v  
+            res[k] = v
     return res
+
 
 def merge_dict_input_to_root(cls, *input_labels):
     """
@@ -41,7 +45,7 @@ def merge_dict_input_to_root(cls, *input_labels):
     node = cls.inputs.parent_folder.creator
     while True:
         for label in input_labels:
-            if not isinstance(label, (tuple,list)):
+            if not isinstance(label, (tuple, list)):
                 label = [label]
 
             base = label[0]
@@ -69,6 +73,7 @@ def merge_dict_input_to_root(cls, *input_labels):
     for label, dct in res.items():
         setattr(cls.inputs, label, orm.Dict(dict=dct))
 
+
 def get_previous_node(old, node_class):
     """
     Function to get the previous CalcJob in a chain of CalcJobs linked by their RemoteData
@@ -76,9 +81,10 @@ def get_previous_node(old, node_class):
     :param node_class: Subclass of CalcJob in the chain
     """
     remote = old.get_incoming(node_class=orm.RemoteData).first().node
-    new    = remote.get_incoming(node_class=node_class).first().node
+    new = remote.get_incoming(node_class=node_class).first().node
 
     return new
+
 
 def recursive_get_linked_node(node, label, node_class):
     """
@@ -97,12 +103,13 @@ def recursive_get_linked_node(node, label, node_class):
 
     return res
 
+
 def get_root_parent(cls, node_class):
     """
     Get the topmost node in a chain of CalcJobs
     """
     parent = cls.inputs.parent_folder
-    calc   = parent.get_incoming(node_class=node_class).first().node
+    calc = parent.get_incoming(node_class=node_class).first().node
 
     while True:
         try:

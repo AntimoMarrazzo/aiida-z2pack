@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import absolute_import
 import json
 from aiida.common import exceptions
 from aiida.parsers.parser import Parser
@@ -11,7 +12,7 @@ Z2packCalculation = CalculationFactory('z2pack.z2pack')
 class Z2packParser(Parser):
     """
     Z2packParser
-    """    
+    """
     def parse(self, **kwargs):
         pc = self.node.process_class
 
@@ -41,13 +42,13 @@ class Z2packParser(Parser):
             out_file = f.readlines()
 
         gap_f   = len(data['convergence_report']['GapCheck']['FAILED'])
-        move_f  = len(data['convergence_report']['MoveCheck']['FAILED'])        
+        move_f  = len(data['convergence_report']['MoveCheck']['FAILED'])
         pos_f   = len(data['convergence_report']['PosCheck']['FAILED'])
         pos_m   = len(data['convergence_report']['PosCheck']['MISSING'])
-        success = not any([gap_f, move_f, pos_f, pos_m])        
-        
+        success = not any([gap_f, move_f, pos_f, pos_m])
+
         data['Tests_passed'] = success
-        
+
 
         #out_file = out_file.split("\n")
         out_file = [i.strip('\n') for i in out_file]
@@ -57,9 +58,9 @@ class Z2packParser(Parser):
                         int(time[1].strip('m')) * 60 + \
                         int(time[2].strip('s'))
 
-        z2pack_version = [i for i in out_file if "running Z2Pack version" in i][0].split()[3]
+        z2pack_version = [i for i in out_file if 'running Z2Pack version' in i][0].split()[3]
         data['wall_time_seconds'] =  wall_time_seconds
-        data['z2pack_version'] =  z2pack_version 
+        data['z2pack_version'] =  z2pack_version
 
         self.out('output_parameters', Dict(dict=data))
 
