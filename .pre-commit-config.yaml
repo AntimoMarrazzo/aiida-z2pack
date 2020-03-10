@@ -1,5 +1,6 @@
+repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v2.2.3
+  rev: v2.5.0
   hooks:
   - id: trailing-whitespace
     exclude: &exclude >
@@ -14,7 +15,7 @@
       )$
 
 - repo: https://github.com/PyCQA/pydocstyle
-  rev: 4.0.1
+  rev: 5.0.2
   hooks:
   - id: pydocstyle
     language: system
@@ -31,7 +32,6 @@
 
 - repo: local
   hooks:
-
   - id: yapf
     name: yapf
     entry: yapf
@@ -47,9 +47,16 @@
         docs/.*|
         tests/.*(?<!\.py)$
       )$
+  - id: tests
+    name: pytest
+    entry: pytest -v
+    language: system
+    files: tests/.*
+    types: [python]
+    stages: [push]
 
 - repo: https://github.com/python-modernize/python-modernize.git
-  rev: a234ce4e185cf77a55632888f1811d83b4ad9ef2
+  rev: '0.7'
   hooks:
   - id: python-modernize
     exclude: >
