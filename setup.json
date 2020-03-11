@@ -20,13 +20,13 @@
         ]
     },
     "install_requires": [
-        "numpy",
-        "scipy",
-        "sklearn",
-        "z2pack",
-        "aiida",
-        "aiida_quantumespresso",
-        "aiida_wannier90"
+        "numpy==1.16.4",
+        "scipy==1.4.1",
+        "sklearn==0.22.1",
+        "z2pack==2.1.1",
+        "aiida>=1.0.0",
+        "aiida_quantumespresso>=3.0.0",
+        "aiida_wannier90>=2.0.0"
     ],
     "extras_require": {
         "dev": [
@@ -51,5 +51,5 @@
     "license": "MIT License",
     "name": "aiida_z2pack",
     "url": "https://github.com/Crivella/aiida-z2pack",
-    "version": "1.0"
+    "version": "2.0"
 }
