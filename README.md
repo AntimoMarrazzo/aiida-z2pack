@@ -2,9 +2,8 @@
 
 # aiida-z2pack
 
-Official Z2pack plugin for AiiDA.
-This repository contains AiiDA workflows and software tools for high-throughput computational topological materials discovery, with a focus on 2D topological insulators and 3D Weyl semimetals.
-The repository as of aiida-z2pack>=2.0 is compatible with aiida-core>=1.0.0. For compatibility with older versions use aiida-z2pack==1.0
+Official Z2pack plugin for AiiDA.  
+The repository as of aiida-z2pack>=2.0 is compatible with aiida-core>=1.0.0. For compatibility with older versions use aiida-z2pack==1.0.  
 The plugin supports Quantum ESPRESSO only.
 
 ### How do I get set up? ###
