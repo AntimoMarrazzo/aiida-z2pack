@@ -1,0 +1,55 @@
+{
+    "author": "Antimo Marrazzo, Davide Grassano and The AiiDA team.",
+    "author_email": "developers@aiida.net",
+    "classifiers": [
+        "License :: OSI Approved :: MIT License",
+        "Programming Language :: Python :: 3.6",
+        "Development Status :: 4 - Beta"
+    ],
+    "description": "The official AiiDA plugin for z2pack",
+    "entry_points": {
+        "aiida.calculations": [
+            "z2pack.z2pack = aiida_z2pack.calculations.z2pack:Z2packCalculation"
+        ],
+        "aiida.parsers": [
+            "z2pack.z2pack = aiida_z2pack.parsers.z2pack:Z2packParser"
+        ],
+        "aiida.workflows": [
+            "z2pack.base = aiida_z2pack.workchains.base:Z2packBaseWorkChain",
+            "z2pack.3DChern = aiida_z2pack.workchains.chern:Z2pack3DChernWorkChain"
+        ]
+    },
+    "install_requires": [
+        "numpy==1.16.4",
+        "scipy==1.4.1",
+        "sklearn==0.22.1",
+        "z2pack==2.1.1",
+        "aiida>=1.0.0",
+        "aiida_quantumespresso>=3.0.0",
+        "aiida_wannier90>=2.0.0"
+    ],
+    "extras_require": {
+        "dev": [
+            "pre-commit==1.17.0",
+            "prospector==1.1.7",
+            "pylint==1.9.4; python_version<'3.0'",
+            "pylint==2.3.1; python_version>='3.0'",
+            "pgtest==1.2.0",
+            "pytest==3.6.3",
+            "pytest-regressions==1.0.6",
+            "yapf==0.28.0"
+        ],
+        "tcod": [
+            "aiida-tcod"
+        ],
+        "docs": [
+            "Sphinx",
+            "docutils",
+            "sphinx_rtd_theme"
+        ]
+    },
+    "license": "MIT License",
+    "name": "aiida_z2pack",
+    "url": "https://github.com/Crivella/aiida-z2pack",
+    "version": "2.0"
+}
