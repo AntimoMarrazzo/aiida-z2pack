@@ -3,7 +3,8 @@
 # aiida-z2pack
 
 Official Z2pack plugin for AiiDA.  
-The repository as of aiida-z2pack>=2.0 is compatible with aiida-core>=1.0.0. For compatibility with older versions use aiida-z2pack==1.0.  
+The repository as of aiida-z2pack>=2.0 is compatible with aiida-core>=1.0.0. 
+For compatibility with older versions use aiida-z2pack==1.0.  
 The plugin supports Quantum ESPRESSO only.
 
 ### How do I get set up? ###
