@@ -1,6 +1,6 @@
 {
-    "author": "Antimo Marrazzo, Davide Grassano and The AiiDA team.",
-    "author_email": "developers@aiida.net",
+    "author": "Antimo Marrazzo, Davide Grassano",
+    "author_email": "antimo.marrazzo@epfl.ch, davide.grassano@epfl.ch",
     "classifiers": [
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python :: 3.6",
@@ -50,6 +50,6 @@
     },
     "license": "MIT License",
     "name": "aiida_z2pack",
-    "url": "https://github.com/Crivella/aiida-z2pack",
+    "url": "https://github.com/AntimoMarrazzo/aiida-z2pack",
     "version": "2.0"
 }
