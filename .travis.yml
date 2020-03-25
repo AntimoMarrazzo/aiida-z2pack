@@ -16,7 +16,6 @@ install:
   - pip install --upgrade pip
   - pip install wheel setuptools reentry
   - pip install aiida-core
-  - pip install aiida-quantumespresso
   - pip install -e .
   - reentry scan
 script:
