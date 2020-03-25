@@ -1,0 +1,22 @@
+language: python
+python:
+  - "3.6"
+  - "3.7"
+  - "3.8"
+services:
+  - rabbitmq
+  - postgresql
+addons:
+  apt:
+    packages:
+      - rabbitmq-server
+before_install:
+  - sudo service postgresql restart
+install:
+  - pip install --upgrade pip
+  - pip install wheel setuptools reentry
+  - pip install aiida-core
+  - pip install -e .[dev]
+  - reentry scan
+script:
+  - pytest

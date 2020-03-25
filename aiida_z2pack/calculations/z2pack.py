@@ -315,26 +315,3 @@ class Z2packCalculation(CalcJob):
             # yapf: disable
             )
 
-    def use_parent_calculation(self, calc):
-        """
-        Set the parent calculation,
-        from which it will inherit the outputsubfolder.
-        The link will be created from parent orm.RemoteData and NamelistCalculation
-        """
-        #if not isinstance(calc, PwCalculation):
-        #    raise ValueError("Parent calculation must be a Pw ")
-        if not isinstance(calc, (PwCalculation,Z2packCalculation)) :
-            raise ValueError('Parent calculation must be a PW or Z2pack ')
-        if isinstance(calc, PwCalculation):
-            # Test to see if parent PwCalculation is nscf
-            par_type = calc.inputs.parameters.dict.CONTROL['calculation'].lower()
-            if par_type != 'scf':
-                raise ValueError('Pw calculation must be scf')
-        try:
-            # remote_folder = calc.get_outputs_dict()['remote_folder']
-            remote_folder = calc.get_outgoing().get_node_by_label('remote_folder')
-        except KeyError:
-            raise AttributeError('No remote_folder found in output to the '
-                                 'parent calculation set')
-        self.use_parent_folder(remote_folder)
-
