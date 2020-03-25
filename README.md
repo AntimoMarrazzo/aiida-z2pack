@@ -7,7 +7,7 @@ The repository as of aiida-z2pack>=2.0 is compatible with aiida-core>=1.0.0.
 For compatibility with older versions use aiida-z2pack==1.0.  
 The plugin supports Quantum ESPRESSO only.
 
-[![Build Status] (https://travis-ci.com/AntimoMarrazzo/aiida-z2pack.svg?branch=master)](https://travis-ci.com/AntimoMarrazzo/aiida-z2pack)
+[![Build Status](https://travis-ci.com/AntimoMarrazzo/aiida-z2pack.svg?branch=master)](https://travis-ci.com/AntimoMarrazzo/aiida-z2pack)
 
 ### How do I get set up? ###
 
