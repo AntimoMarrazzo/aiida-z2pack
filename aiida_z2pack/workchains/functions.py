@@ -8,6 +8,8 @@ from sklearn.cluster import AgglomerativeClustering
 from aiida import orm
 from aiida.engine import calcfunction
 from aiida.common.exceptions import InputValidationError
+from six.moves import range
+from six.moves import zip
 
 
 def recipr_base(base):
@@ -323,3 +325,124 @@ def merge_chern_results(**kwargs):
     res = {'crossings': crossings, 'cherns': cherns}
 
     return orm.Dict(dict=res)
+
+
+########################################################################################################
+@calcfunction
+def generate_kpt_cross(structure, kpoints, step):
+    """Generate a x,y,z cross around each point.
+
+    :param structure: The StructureData to be used.
+    :param kpoints: The original list of kpoints in crystal coordinates.
+    :param step: The size of the step for the cross.
+
+    :return: A KpointsData object containing all the kpt generated, including the original ones
+    """
+    if not isinstance(structure, orm.StructureData):
+        raise InputValidationError(
+            'Invalide type {} for parameter `structure`'.format(
+                type(structure)))
+    if not isinstance(kpoints, orm.ArrayData):
+        raise InputValidationError(
+            'Invalide type {} for parameter `kpoints`'.format(type(kpoints)))
+    if not isinstance(step, orm.Float):
+        raise InputValidationError(
+            'Invalide type {} for parameter `step`'.format(type(step)))
+
+    kpt_cryst = kpoints.get_array('kpoints')
+    try:
+        skips = kpoints.get_array('skips')
+    except:
+        skips = [0] * len(kpt_cryst)
+
+    step = step.value
+
+    cell = structure.cell
+
+    recipr = recipr_base(cell)
+
+    kpts_cart = np.dot(recipr, kpt_cryst)
+
+    # Apply cross shifts to original kpts
+    shifts = np.array([
+        [step, 0, 0],
+        [0, step, 0],
+        [0, 0, step],
+        [0, 0, 0],
+        [-step, 0, 0],
+        [0, -step, 0],
+        [0, 0, -step],
+    ])
+    app = np.empty((0, 3))
+    for s, k in zip(skips, kpts_cart):
+        if s:
+            continue
+        app = np.vstack((app, k + shifts))
+
+    new_kpt = orm.KpointsData()
+    new_kpt.set_cell(cell)
+    new_kpt.set_kpoints(app, cartesian=True)
+
+    return new_kpt
+
+
+@calcfunction
+def analyze_kpt_cross(bands_data, gap_threshold):
+    """Analyze the result of kpt-cross calculation, returning the list of lowst gap and skippable points."""
+    if not isinstance(bands_data, orm.BandsData):
+        raise InputValidationError(
+            'Invalide type {} for parameter `bands_data`'.format(
+                type(bands_data)))
+    if not isinstance(gap_threshold, orm.Float):
+        raise InputValidationError(
+            'Invalide type {} for parameter `gap_threshold`'.format(
+                type(gap_threshold)))
+
+    gap_thr = gap_threshold.value
+    calculation = bands_data.creator
+    gaps = get_gap_array_from_PwCalc(calculation)
+    kpt_cryst = bands_data.get_kpoints()
+    # kpt_cart = bands_data.get_kpoints(cartesian=True)
+
+    res = orm.ArrayData()
+
+    gaps = np.array(gaps).reshape(-1, 7)
+
+    min_pos = np.argmin(gaps, axis=1)
+    min_gap = np.min(gaps, axis=1)
+
+    skips = np.where((min_pos == 3) | (min_gap < gap_thr))[0]
+    app_kpt = kpt_cryst.reshape(-1, 7, 3)
+    new_kpt = app_kpt[list(range(len(min_pos))), min_pos, :]
+
+    res.set_array('skips', skips)
+    res.set_array('kpoints', new_kpt)
+    res.set_array('gaps', min_gap)
+
+    return res
+
+
+@calcfunction
+def finilize_cross_results(cross_data, gap_threshold):
+    """Analyze the final result of kpt-cross calculation, and return valid crossings."""
+    if not isinstance(cross_data, orm.ArrayData):
+        raise InputValidationError(
+            'Invalide type {} for parameter `cross_data`'.format(
+                type(cross_data)))
+    if not isinstance(gap_threshold, orm.Float):
+        raise InputValidationError(
+            'Invalide type {} for parameter `gap_threshold`'.format(
+                type(gap_threshold)))
+
+    gap_thr = gap_threshold.value
+    kpts = cross_data.get_array('kpoints')
+    gaps = cross_data.get_array('gaps')
+
+    w = np.where(gaps <= gap_thr)[0]
+
+    crossings = kpts[w, :]
+
+    res = orm.ArrayData()
+    res.set_array('crossings', crossings)
+
+    return res
