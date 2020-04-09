@@ -349,7 +349,10 @@ def generate_kpt_cross(structure, kpoints, step):
         raise InputValidationError(
             'Invalide type {} for parameter `step`'.format(type(step)))
 
-    kpt_cryst = kpoints.get_array('kpoints')
+    try:
+        kpt_cryst = kpoints.get_array('kpoints')
+    except:
+        kpt_cryst = kpoints.get_array('crossings')
     try:
         skips = kpoints.get_array('skips')
     except:
@@ -358,10 +361,8 @@ def generate_kpt_cross(structure, kpoints, step):
     step = step.value
 
     cell = structure.cell
-
     recipr = recipr_base(cell)
-
-    kpts_cart = np.dot(recipr, kpt_cryst)
+    kpts_cart = np.dot(kpt_cryst, recipr)
 
     # Apply cross shifts to original kpts
     shifts = np.array([

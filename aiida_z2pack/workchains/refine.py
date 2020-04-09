@@ -18,6 +18,7 @@ class RefineCrossingsPosition(WorkChain):
     """Refine the position of a crossing point by moving it along th x,y,z directions in a cross pattern."""
     @classmethod
     def define(cls, spec):
+        # yapf: disable
         super().define(spec)
 
         # INPUTS ############################################################################
@@ -48,15 +49,13 @@ class RefineCrossingsPosition(WorkChain):
         spec.expose_inputs(
             PwBaseWorkChain,
             namespace='bands',
-            exclude=('clean_workdir', 'pw.structure', 'pw.code', 'pw.pseudos',
-                     'kpoints'),
+            exclude=(
+                'clean_workdir', 'pw.structure', 'pw.code', 'pw.pseudos',
+                'kpoints'
+                ),
             namespace_options={
-                'required':
-                False,
-                'populate_defaults':
-                False,
-                'help':
-                'Inputs for the `PwBaseWorkChain` for the BANDS calculation.'
+                'required': True, 'populate_defaults': False,
+                'help': 'Inputs for the `PwBaseWorkChain` for the BANDS calculation.'
             })
 
         spec.input('crossings',
@@ -106,7 +105,7 @@ class RefineCrossingsPosition(WorkChain):
         ncross = len(crossings)
         self.ctx.ncross = ncross
 
-        self.ctx.step = self.inputs.step_size.value
+        self.ctx.step = self.inputs.step_size
         self.ctx.gap_thr = self.inputs.gap_threshold.value
 
         self.ctx.current_kpt = [self.inputs.crossings]
@@ -132,9 +131,10 @@ class RefineCrossingsPosition(WorkChain):
         """Run the bands calculation."""
         inputs = AttributeDict(
             self.exposed_inputs(PwBaseWorkChain, namespace='bands'))
-        inputs.structure = self.ctx.current_structure
-        inputs.base.pw.pseudos = self.inputs.pseudos
-        inputs.base.pw.code = self.inputs.code
+        inputs.pw.structure = self.ctx.current_structure
+        inputs.pw.pseudos = self.inputs.pseudos
+        inputs.pw.code = self.inputs.code
+        inputs.pw.parent_folder = self.inputs.parent_folder
         inputs.clean_workdir = self.inputs.clean_workdir
         inputs.kpoints = self.ctx.kpt_data
 
