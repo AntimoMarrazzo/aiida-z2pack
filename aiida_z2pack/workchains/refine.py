@@ -23,36 +23,10 @@ class RefineCrossingsPosition(WorkChain):
 
         # INPUTS ############################################################################
         spec.input('code', valid_type=orm.Code, help='The PWscf code.')
-        spec.input('structure',
-                   valid_type=orm.StructureData,
-                   help='The inputs structure.')
-        spec.input(
-            'parent_folder',
-            valid_type=orm.RemoteData,
-            required=False,
-            help='The remote data of a previously performed scf calculation.')
-        spec.input_namespace(
-            'pseudos',
-            valid_type=orm.UpfData,
-            dynamic=True,
-            help=
-            'A mapping of `UpfData` nodes onto the kind name to which they should apply.'
-        )
-        spec.input(
-            'clean_workdir',
-            valid_type=orm.Bool,
-            default=orm.Bool(False),
-            help=
-            'If `True`, work directories of all called calculation will be cleaned at the end of execution.'
-        )
 
         spec.expose_inputs(
-            PwBaseWorkChain,
-            namespace='bands',
-            exclude=(
-                'clean_workdir', 'pw.structure', 'pw.code', 'pw.pseudos',
-                'kpoints'
-                ),
+            PwBaseWorkChain, namespace='bands',
+            exclude=('pw.code', ),
             namespace_options={
                 'required': True, 'populate_defaults': False,
                 'help': 'Inputs for the `PwBaseWorkChain` for the BANDS calculation.'
@@ -98,11 +72,11 @@ class RefineCrossingsPosition(WorkChain):
     def setup(self):
         """Define the current structure in the context to be the input structure."""
         self.ctx.counter = 0
-        self.ctx.pseudos = self.inputs.pseudos
-        self.ctx.current_structure = self.inputs.structure
 
-        crossings = self.inputs.crossings.get_array('crossings')
-        ncross = len(crossings)
+        self.ctx.structure = self.inputs.bands.pw.structure
+
+        app = self.inputs.crossings.get_array('crossings')
+        ncross = len(app)
         self.ctx.ncross = ncross
 
         self.ctx.step = self.inputs.step_size
@@ -122,8 +96,8 @@ class RefineCrossingsPosition(WorkChain):
         self.report('Starting iteration number <{:3d}> for {}/{} kpts'.format(
             self.ctx.counter, app[0], self.ctx.ncross))
         curr_kpt = self.ctx.current_kpt[-1]
-        self.ctx.kpt_data = generate_kpt_cross(self.ctx.current_structure,
-                                               curr_kpt, self.ctx.step)
+        self.ctx.kpt_data = generate_kpt_cross(self.ctx.structure, curr_kpt,
+                                               self.ctx.step)
 
         self.ctx.counter += 1
 
@@ -131,11 +105,7 @@ class RefineCrossingsPosition(WorkChain):
         """Run the bands calculation."""
         inputs = AttributeDict(
             self.exposed_inputs(PwBaseWorkChain, namespace='bands'))
-        inputs.pw.structure = self.ctx.current_structure
-        inputs.pw.pseudos = self.inputs.pseudos
         inputs.pw.code = self.inputs.code
-        inputs.pw.parent_folder = self.inputs.parent_folder
-        inputs.clean_workdir = self.inputs.clean_workdir
         inputs.kpoints = self.ctx.kpt_data
 
         running = self.submit(PwBaseWorkChain, **inputs)
