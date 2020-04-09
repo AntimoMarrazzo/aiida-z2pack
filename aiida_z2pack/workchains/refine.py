@@ -80,7 +80,7 @@ class RefineCrossingsPosition(WorkChain):
         self.ctx.ncross = ncross
 
         self.ctx.step = self.inputs.step_size
-        self.ctx.gap_thr = self.inputs.gap_threshold.value
+        self.ctx.gap_thr = self.inputs.gap_threshold
 
         self.ctx.current_kpt = [self.inputs.crossings]
         self.ctx.skip_kpt = [0] * ncross
@@ -131,7 +131,7 @@ class RefineCrossingsPosition(WorkChain):
 
         self.ctx.current_kpt.append(result)
 
-        self.ctx.skip_kpt = self.ctx.current_kpt.get_array('skips')
+        self.ctx.skip_kpt = result.get_array('skips')
 
     def results(self):
         """Output the workchain results."""
