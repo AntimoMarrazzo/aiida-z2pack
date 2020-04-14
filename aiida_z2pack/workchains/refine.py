@@ -97,6 +97,12 @@ class RefineCrossingsPosition(WorkChain):
 
         # OUTPUTS ############################################################################
         spec.output(
+            'scf_remote_folder',
+            valid_type=orm.RemoteData,
+            required=True,
+            help='The remote data produced by the `scf` calculation.'
+        )
+        spec.output(
             'crossings',
             valid_type=orm.ArrayData,
             required=True,
@@ -162,6 +168,8 @@ class RefineCrossingsPosition(WorkChain):
             return self.exit_codes.ERROR_SUB_PROCESS_FAILED_SCF
 
         self.ctx.remote = workchain.outputs.remote_folder
+
+        self.out('scf_remote_folder', self.ctx.remote)
 
     def setup_remote(self):
         """Set remote from previous calculation."""
