@@ -412,7 +412,9 @@ def analyze_kpt_cross(bands_data, gap_threshold):
     min_pos = np.argmin(gaps, axis=1)
     min_gap = np.min(gaps, axis=1)
 
-    skips = np.where((min_pos == 3) | (min_gap < gap_thr))[0]
+    app = np.where((min_pos == 3) | (min_gap < gap_thr))[0]
+    skips = np.zeros(min_pos.shape)
+    skips[app] = 1
     app_kpt = kpt_cryst.reshape(-1, 7, 3)
     new_kpt = app_kpt[list(range(len(min_pos))), min_pos, :]
 
