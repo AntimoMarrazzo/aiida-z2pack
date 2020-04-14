@@ -441,11 +441,14 @@ def finilize_cross_results(cross_data, gap_threshold):
     kpts = cross_data.get_array('kpoints')
     gaps = cross_data.get_array('gaps')
 
-    w = np.where(gaps <= gap_thr)[0]
+    w1 = np.where(gaps <= gap_thr)[0]
+    w2 = np.where(gaps > gap_thr)[0]
 
-    crossings = kpts[w, :]
+    crossings = kpts[w1, :]
+    low_gap = kpts[w2, :]
 
     res = orm.ArrayData()
     res.set_array('crossings', crossings)
+    res.set_array('low_gap', low_gap)
 
     return res
