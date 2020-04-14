@@ -449,6 +449,8 @@ def finilize_cross_results(cross_data, gap_threshold):
 
     res = orm.ArrayData()
     res.set_array('crossings', crossings)
+    res.set_array('cr_gaps', gaps[w1])
     res.set_array('low_gap', low_gap)
+    res.set_array('cr_lg', gaps[w2])
 
     return res
