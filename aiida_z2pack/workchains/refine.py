@@ -7,6 +7,8 @@ from aiida.common import AttributeDict
 from aiida.plugins import WorkflowFactory
 from aiida.engine import WorkChain, while_, if_, ToContext
 
+from aiida_quantumespresso.utils.mapping import prepare_process_inputs
+
 from .functions import (generate_kpt_cross, analyze_kpt_cross,
                         finilize_cross_results)
 from six.moves import zip
@@ -203,6 +205,13 @@ class RefineCrossingsPosition(WorkChain):
         inputs.pw.structure = self.inputs.structure
         inputs.pw.parent_folder = self.ctx.remote
         inputs.clean_workdir = self.inputs.clean_workdir
+
+        inputs.pw.parameters = inputs.pw.parameters.get_dict()
+        inputs.pw.parameters.setdefault('CONTROL', {})
+        inputs.pw.parameters['CONTROL']['calculation'] = 'bands'
+        inputs.pw.parameters['SYSTEM']['nosym'] = True
+
+        inputs = prepare_process_inputs(PwBaseWorkChain, inputs)
 
         self.ctx.inputs = inputs
 
