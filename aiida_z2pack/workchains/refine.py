@@ -236,7 +236,8 @@ class RefineCrossingsPosition(WorkChain):
 
     def analyze_bands(self):
         """Determine next set of origin point for cross search."""
-        result = analyze_kpt_cross(self.ctx.bands, self.ctx.gap_thr)
+        result = analyze_kpt_cross(self.ctx.bands, self.ctx.current_kpt[-1],
+                                   self.ctx.gap_thr)
 
         self.ctx.current_kpt.append(result)
 
