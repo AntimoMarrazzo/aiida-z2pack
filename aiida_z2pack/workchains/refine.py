@@ -101,7 +101,7 @@ class RefineCrossingsPosition(WorkChain):
         spec.output(
             'scf_remote_folder',
             valid_type=orm.RemoteData,
-            required=True,
+            required=False,
             help='The remote data produced by the `scf` calculation.'
         )
         spec.output(
