@@ -696,6 +696,8 @@ class Z2pack3DChernWorkChain(WorkChain):
         self.ctx.iteration = 0
         self.ctx.max_iteration = len(self.ctx.crossings)
 
+        self.ctx.workchain_z2pack = []
+
     def should_do_alltogheter(self):
         """Check if the z2pack calculations can be run concurrently."""
         from aiida.schedulers.plugins.direct import DirectScheduler
@@ -720,7 +722,7 @@ class Z2pack3DChernWorkChain(WorkChain):
                 'invariant':
                 'Chern',
                 'surface':
-                'z2pack.shape.Sphere(center=({0[0]:11.7f}, {0[1]:11.7f}, {0[1]:11.7f}), radius={1})'
+                'z2pack.shape.Sphere(center=({0[0]:11.7f}, {0[1]:11.7f}, {0[2]:11.7f}), radius={1})'
                 .format(cross, self.ctx.radius)
             })
             self.ctx.inputs.z2pack.z2pack_settings = orm.Dict(dict=old)
@@ -756,7 +758,7 @@ class Z2pack3DChernWorkChain(WorkChain):
         old.update({
             'dimension_mode':'3D',
             'invariant':'Chern',
-            'surface':'z2pack.shape.Sphere(center=({0[0]:11.7f}, {0[1]:11.7f}, {0[1]:11.7f}), radius={1})'.format(cross, self.ctx.radius)
+            'surface':'z2pack.shape.Sphere(center=({0[0]:11.7f}, {0[1]:11.7f}, {0[2]:11.7f}), radius={1})'.format(cross, self.ctx.radius)
             })
         self.ctx.inputs.z2pack.z2pack_settings = orm.Dict(dict=old)
 
