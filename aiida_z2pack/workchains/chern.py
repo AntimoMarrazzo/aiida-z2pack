@@ -777,7 +777,7 @@ class Z2pack3DChernWorkChain(WorkChain):
             self.report(
                 'WARNING: Z2packBaseWorkChain failed with exit status {}'.
                 format(workchain.exit_status))
-            # return self.exit_codes.ERROR_SUB_PROCESS_FAILED_Z2PACK
+            return self.exit_codes.ERROR_SUB_PROCESS_FAILED_Z2PACK
 
     def results(self):
         """Output the workchain results."""
