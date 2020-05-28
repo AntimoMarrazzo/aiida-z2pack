@@ -21,8 +21,7 @@
         ]
     },
     "install_requires": [
-        "numpy==1.16.4",
-        "scipy==1.4.1",
+        "scipy>=1.4.1",
         "scikit-learn>=0.22",
         "z2pack==2.1.1",
         "aiida>=1.0.0",
