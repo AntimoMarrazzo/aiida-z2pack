@@ -712,16 +712,13 @@ class Z2pack3DChernWorkChain(WorkChain):
 
     def run_z2pack_all(self):
         """Launch the z2pack calculations all togheter."""
+        # yapf: disable
         old = self.ctx.inputs.z2pack.z2pack_settings.get_dict()
         for cross in self.ctx.crossings:
             old.update({
-                'dimension_mode':
-                '3D',
-                'invariant':
-                'Chern',
-                'surface':
-                'z2pack.shape.Sphere(center=({0[0]:11.7f}, {0[1]:11.7f}, {0[1]:11.7f}), radius={1})'
-                .format(cross, self.ctx.radius)
+                'dimension_mode': '3D',
+                'invariant': 'Chern',
+                'surface': 'z2pack.shape.Sphere(center=({0[0]:11.7f}, {0[1]:11.7f}, {0[2]:11.7f}), radius={1})'.format(cross, self.ctx.radius)
             })
             self.ctx.inputs.z2pack.z2pack_settings = orm.Dict(dict=old)
 
@@ -734,7 +731,7 @@ class Z2pack3DChernWorkChain(WorkChain):
             self.to_context(workchain_z2pack=append_(running))
 
     def inspect_z2pack_all(self):
-        """Verify that the FindCrossingsWorkChain finished successfully."""
+        """Verify that the Z2packBaseWorkChain finished successfully."""
         for workchain in self.ctx.workchain_z2pack:
             if not workchain.is_finished_ok:
                 self.report(
