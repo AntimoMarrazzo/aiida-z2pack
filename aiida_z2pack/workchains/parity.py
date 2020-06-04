@@ -359,6 +359,9 @@ class Z2QSHworkchain(WorkChain):
             }
         }
 
+        inputs['metadata']['options'][
+            'account'] = self.inputs.band.pw.metadata.options.account
+
         running = self.submit(BandsxCalculation, **inputs)
 
         self.report('launching BandsxCalculation<{}>'.format(running.pk))
@@ -425,3 +428,5 @@ class Z2QSHworkchain(WorkChain):
     def results(self):
         """Output the workchain results."""
         self.out('output_parameters', self.ctx.z2)
+
+        self.report('FINISHED')
