@@ -304,7 +304,7 @@ def _handle_no_save_file(self, calculation):
                 self.exit_codes.ERROR_FAILED_SAVEFILE_TWICE.message +
                 ' Aborting...')
             return ErrorHandlerReport(
-                False, True, self.exit_codes.ERROR_FAILED_SAVEFILE_TWICE)
+                True, True, self.exit_codes.ERROR_FAILED_SAVEFILE_TWICE)
 
 
 @register_error_handler(Z2packBaseWorkChain, 570)

@@ -65,7 +65,7 @@ class Z2packCalculation(CalcJob):
     ]
     _blocked_keywords_wannier90 = [
         ('length_unit', 'ang'),
-        ('spinors', True),
+        # ('spinors', True),
         ('num_iter', 0),
         ('use_bloch_phases', True),
     ]
@@ -234,6 +234,14 @@ class Z2packCalculation(CalcJob):
 
         if parent_type == Z2packCalculation:
             self._set_inputs_from_parent_z2pack()
+        elif parent_type == PwCalculation:
+            self._set_inputs_from_parent_scf()
+
+        pw_dct = _lowercase_dict(self.inputs.pw_parameters.get_dict(),
+                                       'pw_dct')
+        sys = pw_dct['system']
+        if sys.get('noncolin', False) and sys.get('lspinorb', False):
+            self._blocked_keywords_wannier90.append(('spinors', True))
 
         try:
             settings = _lowercase_dict(self.inputs.z2pack_settings.get_dict(),
@@ -246,8 +254,6 @@ class Z2packCalculation(CalcJob):
         ptr = calcinfo.remote_symlink_list if symlink else calcinfo.remote_copy_list
 
         if parent_type == PwCalculation:
-            self._set_inputs_from_parent_scf()
-
             prepare_nscf(self, folder)
             prepare_overlap(self, folder)
             prepare_wannier90(self, folder)

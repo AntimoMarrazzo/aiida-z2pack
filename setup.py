@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-"""Setup script for aiida-quantumespresso package."""
+"""Setup script for aiida-z2pack package."""
 from __future__ import absolute_import
 import json
 
 # pylint: disable=wrong-import-order,unused-import
-from utils import fastentrypoints
+# from utils import fastentrypoints
 from setuptools import setup, find_packages
 
 if __name__ == '__main__':

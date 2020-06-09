@@ -9,7 +9,9 @@
   ecutrho =   2.4000000000d+02
   ecutwfc =   3.0000000000d+01
   ibrav = 0
+  lspinorb = .true.
   nat = 2
+  noncolin = .true.
   nosym = .true.
   ntyp = 1
 /

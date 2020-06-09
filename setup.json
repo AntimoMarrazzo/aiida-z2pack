@@ -16,16 +16,16 @@
         ],
         "aiida.workflows": [
             "z2pack.base = aiida_z2pack.workchains.base:Z2packBaseWorkChain",
+            "z2pack.qsh = aiida_z2pack.workchains.parity:Z2QSHworkchain",
             "z2pack.3DChern = aiida_z2pack.workchains.chern:Z2pack3DChernWorkChain",
             "z2pack.refine = aiida_z2pack.workchains.refine:RefineCrossingsPosition"
         ]
     },
     "install_requires": [
-        "numpy==1.16.4",
-        "scipy==1.4.1",
+        "numpy~=1.17,<1.18",
+        "scipy>=1.4.1",
         "scikit-learn>=0.22",
         "z2pack==2.1.1",
-        "aiida>=1.0.0",
         "aiida_quantumespresso==3.0.0a6",
         "aiida_wannier90>=2.0.0"
     ],

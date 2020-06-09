@@ -10,8 +10,8 @@ from aiida_quantumespresso.utils.resources import get_default_options
 
 Z2packCalculation = CalculationFactory('z2pack.z2pack')
 
-@pytest.fixture()
-def pw_parameters():
+@pytest.fixture(params=[True, False], ids=['with_soc', 'no_soc'])
+def pw_parameters(request):
     """Fixture: parameters for pw calculation."""
     param = {
         'CONTROL': {
@@ -22,6 +22,11 @@ def pw_parameters():
             'ecutwfc': 30.0
             }
         }
+    if request.param:
+        param['SYSTEM'].update({
+            'noncolin':True,
+            'lspinorb':True
+            })
     return param
 
 @pytest.fixture(params=[(),], ids=['base',])
@@ -110,7 +115,7 @@ class Test_z2pack_calc():
         assert isinstance(calc_info, datastructures.CalcInfo), 'Unexpected return from `prepare_for_submission`.'
 
     def test_cmdline_params(self, calc_info):
-        """Test if the proper `cmdlin` is being set in calc_info."""
+        """Test if the proper `cmdline` is being set in calc_info."""
         assert sorted(calc_info.cmdline_params) == sorted(self.cmdline_params)
 
     def test_local_copy_list(self, calc_info):
@@ -172,7 +177,7 @@ class Test_z2pack_calc():
             assert sorted(calc_info.remote_symlink_list) == sorted([])
 
     def test_input_created(self, calc_info, fixture_sandbox):
-        """Test if all the required input files are bing created."""
+        """Test if all the required input files are being created."""
         assert sorted(fixture_sandbox.get_content_list()) == sorted(self.inputs)
 
     @pytest.mark.parametrize('name', inputs)

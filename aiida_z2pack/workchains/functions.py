@@ -388,12 +388,15 @@ def generate_kpt_cross(structure, kpoints, step):
 
 
 @calcfunction
-def analyze_kpt_cross(bands_data, gap_threshold):
+def analyze_kpt_cross(bands_data, old_data, gap_threshold):
     """Analyze the result of kpt-cross calculation, returning the list of lowst gap and skippable points."""
     if not isinstance(bands_data, orm.BandsData):
         raise InputValidationError(
             'Invalide type {} for parameter `bands_data`'.format(
                 type(bands_data)))
+    if not isinstance(old_data, orm.ArrayData):
+        raise InputValidationError(
+            'Invalide type {} for parameter `old_data`'.format(type(old_data)))
     if not isinstance(gap_threshold, orm.Float):
         raise InputValidationError(
             'Invalide type {} for parameter `gap_threshold`'.format(
@@ -403,7 +406,6 @@ def analyze_kpt_cross(bands_data, gap_threshold):
     calculation = bands_data.creator
     gaps = get_gap_array_from_PwCalc(calculation)
     kpt_cryst = bands_data.get_kpoints()
-    # kpt_cart = bands_data.get_kpoints(cartesian=True)
 
     res = orm.ArrayData()
 
@@ -412,13 +414,30 @@ def analyze_kpt_cross(bands_data, gap_threshold):
     min_pos = np.argmin(gaps, axis=1)
     min_gap = np.min(gaps, axis=1)
 
-    skips = np.where((min_pos == 3) | (min_gap < gap_thr))[0]
+    app = np.where((min_pos == 3) | (min_gap < gap_thr))[0]
+    new_skips = np.zeros(min_pos.shape)
+    new_skips[app] = 1
     app_kpt = kpt_cryst.reshape(-1, 7, 3)
     new_kpt = app_kpt[list(range(len(min_pos))), min_pos, :]
 
+    try:
+        kpt = old_data.get_array('kpoints')
+        gaps = old_data.get_array('gaps')
+        skips = old_data.get_array('skips')
+    except:
+        kpt = new_kpt
+        gaps = min_gap
+        skips = new_skips
+    else:
+        w = np.where(skips == 0)
+
+        kpt[w] = new_kpt
+        gaps[w] = min_gap
+        skips[w] = new_skips
+
     res.set_array('skips', skips)
-    res.set_array('kpoints', new_kpt)
-    res.set_array('gaps', min_gap)
+    res.set_array('kpoints', kpt)
+    res.set_array('gaps', gaps)
 
     return res
 
@@ -439,11 +458,16 @@ def finilize_cross_results(cross_data, gap_threshold):
     kpts = cross_data.get_array('kpoints')
     gaps = cross_data.get_array('gaps')
 
-    w = np.where(gaps <= gap_thr)[0]
+    w1 = np.where(gaps <= gap_thr)[0]
+    w2 = np.where(gaps > gap_thr)[0]
 
-    crossings = kpts[w, :]
+    crossings = kpts[w1, :]
+    low_gap = kpts[w2, :]
 
     res = orm.ArrayData()
     res.set_array('crossings', crossings)
+    res.set_array('cr_gaps', gaps[w1])
+    res.set_array('low_gap', low_gap)
+    res.set_array('cr_lg', gaps[w2])
 
     return res
