@@ -41,12 +41,15 @@ def prepare_z2pack(cls, folder):
     except KeyError:
         raise exceptions.InputValidationError('No invariant specified for this calculation')
 
-    computer           = cls.inputs.pw_code.computer
-    proc_per_machine   = computer.get_default_mpiprocs_per_machine()
-    n_machines         = cls.inputs.metadata.options.resources['num_machines']
-    mpi_procs          = proc_per_machine * n_machines
-    mpi_command        = computer.get_mpirun_command()
-    mpi_command        = ' '.join(mpi_command).format(tot_num_mpiprocs=mpi_procs)
+    if 'mpi_command' in settings_dict:
+        mpi_command = settings_dict['mpi_command']
+    else:
+        computer           = cls.inputs.pw_code.computer
+        proc_per_machine   = computer.get_default_mpiprocs_per_machine()
+        n_machines         = cls.inputs.metadata.options.resources['num_machines']
+        mpi_procs          = proc_per_machine * n_machines
+        mpi_command        = computer.get_mpirun_command()
+        mpi_command        = ' '.join(mpi_command).format(tot_num_mpiprocs=mpi_procs)
 
     pos_tol            = settings_dict.get('pos_tol', cls._DEFAULT_POS_TOLERANCE)
     gap_tol            = settings_dict.get('gap_tol', cls._DEFAULT_GAP_TOLERANCE)
@@ -75,12 +78,14 @@ def prepare_z2pack(cls, folder):
     overlap_cmd   = ' {} {}'.format(mpi_command, overlap_code.get_execname())
     wannier90_cmd = ' {}'.format(wannier90_code.get_execname())
 
+    pw_in_cmd = settings_dict.get('pw_in_command', '<')
+
     z2cmd = (
         "(\n    '" +
         "ln -s ../out .; ln -s ../pseudo .;'\n    '" +
         wannier90_cmd + ' ' + cls._SEEDNAME + ' -pp;' + "' +\n    '" +
-        nscf_cmd + pools_cmd + ' < ' + cls._INPUT_PW_NSCF_FILE + ' >& ' + cls._OUTPUT_PW_NSCF_FILE + ";' +\n    '" +
-        overlap_cmd + ' < ' + cls._INPUT_OVERLAP_FILE + '  >& ' + cls._OUTPUT_OVERLAP_FILE + ";'\n" +
+        nscf_cmd + pools_cmd + ' {} '.format(pw_in_cmd) + cls._INPUT_PW_NSCF_FILE + ' >& ' + cls._OUTPUT_PW_NSCF_FILE + ";' +\n    '" +
+        overlap_cmd + ' {} '.format(pw_in_cmd) + cls._INPUT_OVERLAP_FILE + '  >& ' + cls._OUTPUT_OVERLAP_FILE + ";'\n" +
         ')'
         # yapf: disable
         )
