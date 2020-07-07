@@ -36,7 +36,7 @@ User's guide
 
    user_guide/index
 
-Modules provided with aiida-quantumespresso (API reference)
+Modules provided with aiida-z2pack (API reference)
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 .. toctree::

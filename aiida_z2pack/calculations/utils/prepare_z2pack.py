@@ -37,7 +37,7 @@ def prepare_z2pack(cls, folder):
         raise exceptions.InputValidationError('No dimension_mode specified for this calculation')
 
     try:
-        invariant = settings_dict['invariant']
+        invariant = settings_dict['invariant'].lower()
     except KeyError:
         raise exceptions.InputValidationError('No invariant specified for this calculation')
 
@@ -124,10 +124,10 @@ def prepare_z2pack(cls, folder):
         input_file_lines.append('result = z2pack.surface.run(')
         input_file_lines.append('    system             = system,')
         if dim_mode == '2D':
-            if invariant == 'Z2':
+            if invariant == 'z2':
                 input_file_lines.append(
                     '    surface            = lambda t1,t2: [t2, t1/2, 0],')
-            elif invariant == 'Chern':
+            elif invariant == 'chern':
                 input_file_lines.append(
                     '    surface            = lambda t1,t2: [t1, t2, 0],')
         elif dim_mode == '3D':
