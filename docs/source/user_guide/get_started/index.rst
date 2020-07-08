@@ -9,7 +9,7 @@ guide you through submitting your Z2pack calculations using AiiDA.
 
 The following tutorials assume that you have:
 	- setup an AiiDA profile
-	- setup a computer in AiiDA (local or remte)
+	- setup a computer in AiiDA (local or remote)
 	- installed Quantum ESPRESSO and set up the following codes in AiiDA:
 
 		* pw.x
