@@ -3,25 +3,18 @@ from __future__ import absolute_import
 from aiida import orm
 from aiida.common import AttributeDict
 from aiida.plugins import WorkflowFactory, CalculationFactory
-from aiida.engine import ToContext, while_, if_
+from aiida.engine import ToContext, while_, if_, BaseRestartWorkChain, process_handler, ProcessHandlerReport
 
-# from aiida_quantumespresso.utils.mapping import prepare_process_inputs
-from aiida_quantumespresso.common.workchain.utils import register_error_handler, ErrorHandlerReport
-from aiida_quantumespresso.common.workchain.base.restart import BaseRestartWorkChain
 from six.moves import range
 
-PwCalculation = CalculationFactory('quantumespresso.pw')
 Z2packCalculation = CalculationFactory('z2pack.z2pack')
 PwBaseWorkChain = WorkflowFactory('quantumespresso.pw.base')
-
-# PwBaseWorkChain   = WorkflowFactory('quantumespresso.pw.base')
-# PwRelaxWorkChain  = WorkflowFactory('quantumespresso.pw.relax')
 
 
 class Z2packBaseWorkChain(BaseRestartWorkChain):
     """Workchain to run a basic z2pack calculation, starting from the `scf` calculation."""
 
-    _calculation_class = Z2packCalculation
+    _process_class = Z2packCalculation
 
     @classmethod
     def define(cls, spec):
@@ -47,7 +40,7 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
             )
         spec.input(
             'clean_workdir', valid_type=orm.Bool,
-            default=orm.Bool(False),
+            default=lambda: orm.Bool(False),
             help='If `True`, work directories of all called calculation will be cleaned at the end of execution.'
             )
         spec.input(
@@ -62,12 +55,12 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
         #Z2pack inputs ###########################################################
         spec.input(
             'min_neighbour_distance_scale_factor', valid_type=orm.Float,
-            default=orm.Float(10.0),
+            default=lambda: orm.Float(10.0),
             help='Scale factor for min_neighbour_distance to be used between restarts when convergence is not achieved.'
             )
         spec.input(
             'min_neighbour_distance_threshold_minimum', valid_type=orm.Float,
-            default=orm.Float(1E-4),
+            default=lambda: orm.Float(1E-4),
             help='Stop the restart iterations when `min_neighbour_distance` becomes smaller than this threshold.'
             )
         spec.expose_inputs(
@@ -85,10 +78,10 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
                 cls.inspect_scf,
                 ),
             cls.setup_z2pack,
-            while_(cls.should_run_calculation)(
-                cls.prepare_calculation,
-                cls.run_calculation,
-                cls.inspect_calculation
+            while_(cls.should_run_process)(
+                cls.prepare_process,
+                cls.run_process,
+                cls.inspect_process
                 ),
             cls.results
             )
@@ -165,14 +158,14 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
 
         self.ctx.parent_folder = self.ctx.workchain_scf.outputs.remote_folder
 
-    def should_run_calculation(self):
+    def should_run_process(self):
         """Return whether a new calculation should be run.
 
         Same behaviour as the BaseRestartWorkChain from the qe plugin.
         Also stop the iterations if the `min_neighbour_distance` convergence parameter drops below the set
         threshold level.
         """
-        return super().should_run_calculation(
+        return super().should_run_process(
         ) and self.ctx.current_MND >= self.ctx.MND_threshold
 
     def setup_z2pack(self):
@@ -194,7 +187,7 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
 
         self.ctx.inputs = inputs
 
-    def prepare_calculation(self):
+    def prepare_process(self):
         """Prepare the inputs for a loop restart calculation."""
         self.ctx.inputs.z2pack_settings[
             'min_neighbour_dist'] = self.ctx.current_MND
@@ -206,17 +199,11 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
                 remote = self.ctx.parent_folder
             self.ctx.inputs.parent_folder = remote
 
-    def inspect_calculation(self):
+    def inspect_process(self):
         """Check the outputs of the calculation."""
         self.ctx.inputs.z2pack_settings['restart_mode'] = True
 
-        return super().inspect_calculation()
-
-    # def results(self):
-    #     """Attach the output parameters of the last workchain to the outputs."""
-
-    #     final_calc = self.ctx.calculations[-1]
-    #     self.out('output_parameters', final_calc.outputs.output_parameters)
+        return super().inspect_process()
 
     def _autoset_wannier90_paremters(self):
         """If not given, set the number of wannier functions and band as all the bands up to the valence one. Ignore the rest."""
@@ -244,12 +231,6 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
 
         return res
 
-    def _handle_calculation_sanity_checks(self, calculation):
-        """Check if the calculation fnished but did not reach convergence."""
-        report_convergence = self._handle_not_converged(calculation)
-        if not self.ctx.is_converged:
-            return report_convergence
-
     def report_error_handled(self, calculation, action):
         """Report an action taken for a calculation that has failed.
 
@@ -265,31 +246,33 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
         self.report('{}<{}> failed with exit status {}: {}'.format(*arguments))
         self.report('Action taken: {}'.format(action))
 
+    @process_handler(priority=600)
+    def handle_unrecoverable_failure(self, calculation):
+        """Handle calculations with an exit status below 400 which are unrecoverable, so abort the work chain."""
+        if calculation.is_failed and calculation.exit_status < 400:
+            self.report_error_handled(calculation,
+                                      'unrecoverable error, aborting...')
+            return ProcessHandlerReport(
+                True, self.exit_codes.ERROR_UNRECOVERABLE_FAILURE)
 
-@register_error_handler(Z2packBaseWorkChain, 600)
-def _handle_unrecoverable_failure(self, calculation):
-    """Handle calculations with an exit status below 400 which are unrecoverable, so abort the work chain."""
-    if calculation.exit_status < 400:
-        self.report_error_handled(calculation,
-                                  'unrecoverable error, aborting...')
-        return ErrorHandlerReport(True, True,
-                                  self.exit_codes.ERROR_UNRECOVERABLE_FAILURE)
-
-
-@register_error_handler(Z2packBaseWorkChain, 590)
-def _handle_out_of_walltime(self, calculation):
-    """Handle calculation that did not finish because the walltime was exceeded."""
-    if calculation.exit_status == Z2packCalculation.exit_codes.ERROR_MISSING_RESULTS_FILE.status:
+    @process_handler(
+        priority=590,
+        exit_codes=[
+            Z2packCalculation.exit_codes.ERROR_MISSING_RESULTS_FILE,
+        ])
+    def handle_out_of_walltime(self, calculation):
+        """Handle calculation that did not finish because the walltime was exceeded."""
         self.report_error_handled(
             calculation,
             'The calculation died because of exceeded walltime. Restarting...')
-        return ErrorHandlerReport(True, True, 0)
+        return ProcessHandlerReport(True)
 
-
-@register_error_handler(Z2packBaseWorkChain, 580)
-def _handle_no_save_file(self, calculation):
-    """Try to relaunch calculation that did not produce a save file once. Exit if it fails twice."""
-    if calculation.exit_status == Z2packCalculation.exit_codes.ERROR_MISSING_SAVE_FILE.status:
+    @process_handler(priority=580,
+                     exit_codes=[
+                         Z2packCalculation.exit_codes.ERROR_MISSING_SAVE_FILE,
+                     ])
+    def handle_no_save_file(self, calculation):
+        """Try to relaunch calculation that did not produce a save file once. Exit if it fails twice."""
         if 'restart_no_save' not in self.ctx:
             self.ctx.restart_no_save = True
             self.ctx.inputs.z2pack_settings['restart_mode'] = False
@@ -297,65 +280,63 @@ def _handle_no_save_file(self, calculation):
                 calculation,
                 'The calculation died before the savefile for a restart was produced, trying to restart it from scratch.'
             )
-            return ErrorHandlerReport(True, True, 0)
+            return ProcessHandlerReport(True, 0)
         else:
             self.report_error_handled(
                 calculation,
                 self.exit_codes.ERROR_FAILED_SAVEFILE_TWICE.message +
                 ' Aborting...')
-            return ErrorHandlerReport(
-                True, True, self.exit_codes.ERROR_FAILED_SAVEFILE_TWICE)
+            return ProcessHandlerReport(
+                True, self.exit_codes.ERROR_FAILED_SAVEFILE_TWICE)
 
+    @process_handler(priority=570)
+    def handle_failed(self, calculation):
+        """Handle calculation that did not produce an output."""
+        try:
+            calculation.outputs.output_parameters
+        except:
+            return ProcessHandlerReport(
+                True, self.exit_codes.ERROR_UNRECOVERABLE_FAILURE)
 
-@register_error_handler(Z2packBaseWorkChain, 570)
-def _handle_failed(self, calculation):
-    """Handle calculation that did not produce an output."""
-    try:
-        calculation.outputs.output_parameters
-    except:
-        return ErrorHandlerReport(False, True,
-                                  self.exit_codes.ERROR_UNRECOVERABLE_FAILURE)
+    @process_handler(priority=560)
+    def handle_not_converged(self, calculation):
+        """Lower threshold and restart calculation that finished ok, but did not reach convergence because of min threshold parameters."""
+        # try:
+        #     settings = calculation.inputs.z2pack.z2pack_settings
+        # except:
+        #     settings = {}
+        param = calculation.outputs.output_parameters
 
+        self.ctx.is_converged = False
+        if not param['Tests_passed']:
+            report = param['convergence_report']
+            # self.report_error_handled('calculation<{}> did not achieve convergence.')
+            if len(report['PosCheck']['FAILED']):
+                # pos_tol  = settings.get('pos_tol', Z2packCalculation._DEFAULT_POS_TOLERANCE)
+                # iterator = settings.get('iterator', Z2packCalculation._DEFAULT_ITERATOR)
+                # self.report_error_handled('Convergence across line failed with `pos_tol={}` and `iterator={}`'.format(
+                #     pos_tol, iterator
+                #     ))
+                return ProcessHandlerReport(
+                    True, self.exit_codes.ERROR_POS_TOL_CONVERGENCE_FAILED)
 
-@register_error_handler(Z2packBaseWorkChain, 560)
-def _handle_not_converged(self, calculation):
-    """Lower threshold and restart calculation that finished ok, but did not reach convergence because of min threshold parameters."""
-    # try:
-    #     settings = calculation.inputs.z2pack.z2pack_settings
-    # except:
-    #     settings = {}
-    param = calculation.outputs.output_parameters
+            # if len(param['GapCheck']['FAILED']):
+            #     # gap_tol  = settings.get('gap_tol', Z2packCalculation._DEFAULT_GAP_TOLERANCE)
+            #     # MND = settings.get('min_neighbour_dist', Z2packCalculation._DEFAULT_MIN_NEIGHBOUR_DISTANCE)
+            #     # self.report_error_handled(
+            #     #     'Convergence of gap position between lines failed with `gap_tol={}` and `min_neighbour_dist={}`'.format(
+            #     #     gap_tol, MND
+            #     #     ))
+            #     return ErrorHandlerReport(True, True, self.exit_codes.ERROR_GAP_TOL_CONVERGENCE_FAILED)
 
-    self.ctx.is_converged = False
-    if not param['Tests_passed']:
-        report = param['convergence_report']
-        # self.report_error_handled('calculation<{}> did not achieve convergence.')
-        if len(report['PosCheck']['FAILED']):
-            # pos_tol  = settings.get('pos_tol', Z2packCalculation._DEFAULT_POS_TOLERANCE)
-            # iterator = settings.get('iterator', Z2packCalculation._DEFAULT_ITERATOR)
-            # self.report_error_handled('Convergence across line failed with `pos_tol={}` and `iterator={}`'.format(
-            #     pos_tol, iterator
-            #     ))
-            return ErrorHandlerReport(
-                True, True, self.exit_codes.ERROR_POS_TOL_CONVERGENCE_FAILED)
+            if len(report['MoveCheck']['FAILED']) or len(
+                    report['GapCheck']['FAILED']):
+                self.ctx.current_MND /= self.ctx.MND_scale_factor
+                self.report_error_handled(
+                    calculation,
+                    'Convergence between lines failed. Reducing `min_neighbour_dist` and rerunning calculation.'
+                )
+                return ProcessHandlerReport(True)
 
-        # if len(param['GapCheck']['FAILED']):
-        #     # gap_tol  = settings.get('gap_tol', Z2packCalculation._DEFAULT_GAP_TOLERANCE)
-        #     # MND = settings.get('min_neighbour_dist', Z2packCalculation._DEFAULT_MIN_NEIGHBOUR_DISTANCE)
-        #     # self.report_error_handled(
-        #     #     'Convergence of gap position between lines failed with `gap_tol={}` and `min_neighbour_dist={}`'.format(
-        #     #     gap_tol, MND
-        #     #     ))
-        #     return ErrorHandlerReport(True, True, self.exit_codes.ERROR_GAP_TOL_CONVERGENCE_FAILED)
-
-        if len(report['MoveCheck']['FAILED']) or len(
-                report['GapCheck']['FAILED']):
-            self.ctx.current_MND /= self.ctx.MND_scale_factor
-            self.report_error_handled(
-                calculation,
-                'Convergence between lines failed. Reducing `min_neighbour_dist` and rerunning calculation.'
-            )
-            return ErrorHandlerReport(True, True)
-
-    self.ctx.is_converged = True
-    return ErrorHandlerReport(True, True)
+        # self.ctx.is_converged = True
+        # return ProcessHandlerReport(True)
