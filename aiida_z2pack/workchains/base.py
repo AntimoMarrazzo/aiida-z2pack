@@ -7,6 +7,7 @@ from aiida.engine import ToContext, while_, if_, BaseRestartWorkChain, process_h
 
 from six.moves import range
 
+PwCalculation = CalculationFactory('quantumespresso.pw')
 Z2packCalculation = CalculationFactory('z2pack.z2pack')
 PwBaseWorkChain = WorkflowFactory('quantumespresso.pw.base')
 
@@ -115,6 +116,8 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
         except:
             self.ctx.current_MND = Z2packCalculation._DEFAULT_MIN_NEIGHBOUR_DISTANCE
 
+        self.ctx.restart = False
+
         self.ctx.MND_threshold = self.inputs.min_neighbour_distance_threshold_minimum.value
         self.ctx.MND_scale_factor = self.inputs.min_neighbour_distance_scale_factor.value
 
@@ -125,6 +128,10 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
                 self.report(
                     'WARNING: both `scf` and `parent_folder` input ports specfied. `scf` will be ignored'
                 )
+
+            pc = self.inputs.parent_folder.creator.process_class
+            if not issubclass(pc, PwCalculation):
+                self.ctx.restart = True
 
             self.ctx.parent_folder = self.inputs.parent_folder
 
@@ -176,14 +183,16 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
         inputs.parent_folder = self.ctx.parent_folder
         inputs.z2pack_settings = inputs.z2pack_settings.get_dict()
 
-        if 'wannier90_parameters' not in inputs:
-            inputs.wannier90_parameters = self._autoset_wannier90_paremters()
-        else:
-            params = inputs.wannier90_parameters.get_dict()
-            if any(var not in params
-                   for var in ['num_wann', 'num_bands', 'exclude_bands']):
+        if not self.ctx.restart:
+            if 'wannier90_parameters' not in inputs:
                 inputs.wannier90_parameters = self._autoset_wannier90_paremters(
                 )
+            else:
+                params = inputs.wannier90_parameters.get_dict()
+                if any(var not in params
+                       for var in ['num_wann', 'num_bands', 'exclude_bands']):
+                    inputs.wannier90_parameters = self._autoset_wannier90_paremters(
+                    )
 
         self.ctx.inputs = inputs
 
@@ -192,7 +201,7 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
         self.ctx.inputs.z2pack_settings[
             'min_neighbour_dist'] = self.ctx.current_MND
         if self.ctx.iteration > 0:
-            previous = self.ctx.calculations[-1]
+            previous = self.ctx.children[-1]
             try:
                 remote = previous.outputs.remote_folder
             except:
@@ -243,7 +252,12 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
             calculation.process_label, calculation.pk, calculation.exit_status,
             calculation.exit_message
         ]
-        self.report('{}<{}> failed with exit status {}: {}'.format(*arguments))
+        if calculation.exit_status:
+            self.report(
+                '{}<{}> failed with exit status {}: {}'.format(*arguments))
+        else:
+            self.report('{}<{}> sanity check failed'.format(*arguments[:2]))
+
         self.report('Action taken: {}'.format(action))
 
     @process_handler(priority=600)
