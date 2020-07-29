@@ -80,8 +80,9 @@ def calculate_invariant_with_parities(dimensionality: orm.Int,
         elif x == -1:
             res = {'nu': 1}
         else:
-            raise exceptions.OutputParsingError(
-                'Invalid result for z2 using parities')
+            res = {'nu': -1}
+            # raise exceptions.OutputParsingError(
+            #     'Invalid result for z2 using parities')
 
     elif dim == 3:
         raise NotImplemented('dimensionality = 3  not implemented.')
@@ -186,7 +187,8 @@ class Z2QSHworkchain(WorkChain):
                 cls.calculate_trim_parity,
                 cls.inspect_trim_parity,
                 cls.calculate_z2_with_parity,
-            ).else_(
+            ),
+            if_(cls.should_do_z2pack)(
                 cls.prepare_z2pack,
                 cls.run_z2pack,
                 cls.inspect_z2pack,
@@ -239,6 +241,7 @@ class Z2QSHworkchain(WorkChain):
 
             self.ctx.current_structure = pw_calc.inputs.structure
             self.ctx.scf_out_params = pw_calc.outputs.output_parameters
+        self.ctx.parities_ok = True
 
     def should_do_scf(self):
         """Determine if the scf calculaiton should be run."""
@@ -279,9 +282,11 @@ class Z2QSHworkchain(WorkChain):
         self.out('scf_remote_folder', self.ctx.scf_folder)
 
     def should_use_parity(self):
-        """Check whether parities can/should be used for th calculations instead of z2pack."""
+        """Check whether parities can/should be used for the calculations instead of z2pack."""
         if 'use_parity' in self.inputs:
-            return self.inputs.use_parity.value
+            res = self.inputs.use_parity.value
+            self.ctx.should_use_parity = res
+            return res
 
         dct = self.ctx.scf_out_params.get_dict()
 
@@ -299,7 +304,9 @@ class Z2QSHworkchain(WorkChain):
                 'Calculation of parities not implemented for non-symmorphic systems. Defaulting to z2pack.'
             )
 
-        return inv_check and symmorph_check
+        res = inv_check and symmorph_check
+        self.ctx.should_use_parity = res
+        return res
 
     def calculate_trim_wf(self):
         """Launch a pw_bands calculation on the TRIM points for the structure."""
@@ -384,6 +391,17 @@ class Z2QSHworkchain(WorkChain):
         scf_out_params = self.ctx.scf_folder.creator.outputs.output_parameters
         self.ctx.z2 = calculate_invariant_with_parities(
             self.inputs.dimensionality, scf_out_params, self.ctx.parities)
+
+        nu = self.ctx.z2.get_dict()['nu']
+        if nu == -1:
+            self.ctx.parities_ok = False
+            self.report(
+                'Invalid result or calculation with parities. Using z2pack...')
+
+    def should_do_z2pack(self):
+        """Check whether z2pack should be used for the calculation."""
+        should_use_parity = self.ctx.should_use_parity
+        return not should_use_parity or not self.ctx.parities_ok
 
     def prepare_z2pack(self):
         """Prepare the inputs for the z2ack calculation."""
