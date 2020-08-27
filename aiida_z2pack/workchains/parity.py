@@ -366,8 +366,11 @@ class Z2QSHworkchain(WorkChain):
             }
         }
 
-        inputs['metadata']['options'][
-            'account'] = self.inputs.band.pw.metadata.options.account
+        try:
+            inputs['metadata']['options'][
+                'account'] = self.inputs.band.pw.metadata.options.account
+        except:
+            pass
 
         running = self.submit(BandsxCalculation, **inputs)
 
