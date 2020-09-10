@@ -294,7 +294,7 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
                 calculation,
                 'The calculation died before the savefile for a restart was produced, trying to restart it from scratch.'
             )
-            return ProcessHandlerReport(True, 0)
+            return ProcessHandlerReport(True)
         else:
             self.report_error_handled(
                 calculation,
