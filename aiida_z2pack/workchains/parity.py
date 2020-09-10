@@ -138,7 +138,7 @@ class Z2QSHworkchain(WorkChain):
             )
         spec.input(
             'clean_workdir', valid_type=orm.Bool,
-            default=orm.Bool(False),
+            default=lambda: orm.Bool(False),
             help='If `True`, work directories of all called calculation will be cleaned at the end of execution.'
             )
 
