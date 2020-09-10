@@ -221,6 +221,8 @@ class Z2QSHworkchain(WorkChain):
             message='the Z2packBaseWorkChain sub process failed')
         spec.exit_code(333, 'ERROR_INVALID_INPUT',
             message='Must provide either `scf` namelist or `parent_folder` RemoteData as input.')
+        spec.exit_code(343, 'ERROR_UNKOWN_REMOTE',
+            message='Remote folder must com either from PwCalculation or Z2packCalculation.')
         spec.exit_code(433, 'ERROR_INVALID_Z2_RESULT',
             message='Must provide either `scf` namelist or `parent_folder` RemoteData as input.')
         # yapf: enable
@@ -229,18 +231,36 @@ class Z2QSHworkchain(WorkChain):
         """Define the current structure in the context to be the input structure."""
         if 'scf' in self.inputs:
             self.ctx.current_structure = self.inputs.structure
+            if 'parent_folder' in self.inputs:
+                self.report(
+                    '\'scf\' input port specified: Ignoring \'parent_folder\'.'
+                )
         else:
             if not 'parent_folder' in self.inputs:
                 return self.exit_codes.ERROR_INVALID_INPUT
 
-            self.report('setting `parent_folder` from input')
+            remote = self.inputs.parent_folder
+            parent = remote.creator
+            pname = parent.process_class.__name__
 
-            self.ctx.scf_folder = self.inputs.parent_folder
+            self.report(
+                'setting `parent_folder` from remote of {} -> RemoteData<{}>'.
+                format(pname, remote.pk))
 
-            pw_calc = self.inputs.parent_folder.creator
+            self.ctx.scf_folder = remote
 
-            self.ctx.current_structure = pw_calc.inputs.structure
-            self.ctx.scf_out_params = pw_calc.outputs.output_parameters
+            if pname == 'PwCalculation':
+                self.ctx.current_structure = parent.inputs.structure
+                self.ctx.scf_out_params = parent.outputs.output_parameters
+            elif pname == 'Z2packCalculation':
+                self.ctx.current_structure = self.inputs.structure
+                self.ctx.should_use_parity = False
+            else:
+                self.report(
+                    'Don\'t know how to use remote folder from {}'.format(
+                        pname))
+                return self.exit_codes.ERROR_UNKOWN_REMOTE
+
         self.ctx.parities_ok = True
 
     def should_do_scf(self):
@@ -283,6 +303,9 @@ class Z2QSHworkchain(WorkChain):
 
     def should_use_parity(self):
         """Check whether parities can/should be used for the calculations instead of z2pack."""
+        if 'should_use_parity' in self.ctx:
+            return self.ctx.should_use_parity
+
         if 'use_parity' in self.inputs:
             res = self.inputs.use_parity.value
             self.ctx.should_use_parity = res
