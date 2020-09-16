@@ -4,6 +4,7 @@ from aiida import orm
 from aiida.common import AttributeDict
 from aiida.plugins import WorkflowFactory, CalculationFactory
 from aiida.engine import ToContext, while_, if_, BaseRestartWorkChain, process_handler, ProcessHandlerReport
+from aiida.common.exceptions import InputValidationError
 
 from six.moves import range
 
@@ -88,6 +89,14 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
             )
 
         spec.expose_outputs(Z2packCalculation)
+        spec.expose_outputs(PwBaseWorkChain, namespace='scf',
+            namespace_options={
+                'required':False,
+                })
+        spec.output(
+            'last_z2pack_remote_folder', valid_type=orm.RemoteData,
+            required=False, help=''
+            )
         spec.output(
             'wannier90_parameters', valid_type=orm.Dict,
             required=False,
@@ -100,8 +109,12 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
             message='Calculation finished, but convergence not achieved.')
         spec.exit_code(211, 'ERROR_POS_TOL_CONVERGENCE_FAILED',
             message='WCCs position is not stable when increasing k-points on a line.')
-        spec.exit_code(221, 'ERROR_MOVEGAP_TOL_CONVERGENCE_FAILED',
+        spec.exit_code(221, 'ERROR_MOVE_TOL_CONVERGENCE_FAILED',
             message='Position of largest gap between WCCs varies too much between neighboring lines.')
+        spec.exit_code(222, 'ERROR_GAP_TOL_CONVERGENCE_FAILED',
+            message='The WCC gap between neighboring lines are too close.')
+        spec.exit_code(223, 'ERROR_MOVE_GAP_TOL_CONVERGENCE_FAILED',
+            message='Both gap_tol and move_tol convergence failed.')
         spec.exit_code(231, 'ERROR_FAILED_SAVEFILE_TWICE',
             message='The calculation failed to produce the savefile for a restart twice.')
         # yapf: enable
@@ -130,8 +143,14 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
                 )
 
             pc = self.inputs.parent_folder.creator.process_class
-            if not issubclass(pc, PwCalculation):
+            if issubclass(pc, PwCalculation):
+                pass
+            elif issubclass(pc, Z2packCalculation):
                 self.ctx.restart = True
+            else:
+                raise InputValidationError(
+                    '`parent_folder` must be subclas of either `PwCalculation` or `Z2packCalculation`.'
+                )
 
             self.ctx.parent_folder = self.inputs.parent_folder
 
@@ -164,6 +183,9 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
             return self.exit_codes.ERROR_SUB_PROCESS_FAILED_STARTING_SCF
 
         self.ctx.parent_folder = self.ctx.workchain_scf.outputs.remote_folder
+
+        self.out_many(
+            self.exposed_outputs(workchain, PwBaseWorkChain, namespace='scf'))
 
     def should_run_process(self):
         """Return whether a new calculation should be run.
@@ -212,7 +234,35 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
         """Check the outputs of the calculation."""
         self.ctx.inputs.z2pack_settings['restart_mode'] = True
 
-        return super().inspect_process()
+        res = super().inspect_process()
+
+        if res is None or res.status != 0:
+            node = self.ctx.children[self.ctx.iteration - 1]
+            self.out('last_z2pack_remote_folder', node.outputs.remote_folder)
+
+        return res
+
+    # def on_terminated(self):
+    #     """Store last available z2pack remote data."""
+    #     node = self.ctx.children[self.ctx.iteration - 1]
+
+    #     for node in self.ctx.children[::-1]:
+    #         if 'remote_folder' in node.outputs:
+    #             self.out('last_z2pack_remote_folder', node.outputs.remote_folder)
+    #             break
+
+    #     super().on_terminated()
+
+    # def on_failed(self):
+    #     """Store last available z2pack remote data."""
+    #     node = self.ctx.children[self.ctx.iteration - 1]
+
+    #     for node in self.ctx.children[::-1]:
+    #         if 'remote_folder' in node.outputs:
+    #             self.out('last_z2pack_remote_folder', node.outputs.remote_folder)
+    #             break
+
+    #     super().on_failed()
 
     def _autoset_wannier90_paremters(self):
         """If not given, set the number of wannier functions and band as all the bands up to the valence one. Ignore the rest."""
@@ -343,17 +393,24 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
             #     #     ))
             #     return ErrorHandlerReport(True, True, self.exit_codes.ERROR_GAP_TOL_CONVERGENCE_FAILED)
 
-            if len(report['MoveCheck']['FAILED']) or len(
-                    report['GapCheck']['FAILED']):
+            gcheck = len(report['GapCheck']['FAILED'])
+            mcheck = len(report['MoveCheck']['FAILED'])
+            if mcheck or gcheck:
                 self.ctx.current_MND /= self.ctx.MND_scale_factor
                 if self.ctx.current_MND < self.ctx.MND_threshold:
                     self.report_error_handled(
                         calculation,
                         'Convergence between lines failed. `min_neighbour_dist` already at minimum value.'
                     )
-                    return ProcessHandlerReport(
-                        True,
-                        self.exit_codes.ERROR_MOVEGAP_TOL_CONVERGENCE_FAILED)
+                    if gcheck:
+                        if mcheck:
+                            error = self.exit_codes.ERROR_MOVE_GAP_TOL_CONVERGENCE_FAILED
+                        else:
+                            error = self.exit_codes.ERROR_GAP_TOL_CONVERGENCE_FAILED
+                    else:
+                        error = self.exit_codes.ERROR_MOVE_TOL_CONVERGENCE_FAILED
+                    return ProcessHandlerReport(True, error)
+
                 self.report_error_handled(
                     calculation,
                     'Convergence between lines failed. Reducing `min_neighbour_dist` and rerunning calculation.'
