@@ -100,7 +100,7 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
             message='Calculation finished, but convergence not achieved.')
         spec.exit_code(211, 'ERROR_POS_TOL_CONVERGENCE_FAILED',
             message='WCCs position is not stable when increasing k-points on a line.')
-        spec.exit_code(221, 'ERROR_GAP_TOL_CONVERGENCE_FAILED',
+        spec.exit_code(221, 'ERROR_MOVEGAP_TOL_CONVERGENCE_FAILED',
             message='Position of largest gap between WCCs varies too much between neighboring lines.')
         spec.exit_code(231, 'ERROR_FAILED_SAVEFILE_TWICE',
             message='The calculation failed to produce the savefile for a restart twice.')
@@ -111,7 +111,7 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
         super().setup()
 
         try:
-            self.ctx.current_MND = self.inputs.z2pack.z2pack_settings.get(
+            self.ctx.current_MND = self.inputs.z2pack.z2pack_settings.get_attribute(
                 'min_neighbour_dist')
         except:
             self.ctx.current_MND = Z2packCalculation._DEFAULT_MIN_NEIGHBOUR_DISTANCE
@@ -346,6 +346,14 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
             if len(report['MoveCheck']['FAILED']) or len(
                     report['GapCheck']['FAILED']):
                 self.ctx.current_MND /= self.ctx.MND_scale_factor
+                if self.ctx.current_MND < self.ctx.MND_threshold:
+                    self.report_error_handled(
+                        calculation,
+                        'Convergence between lines failed. `min_neighbour_dist` already at minimum value.'
+                    )
+                    return ProcessHandlerReport(
+                        True,
+                        self.exit_codes.ERROR_MOVEGAP_TOL_CONVERGENCE_FAILED)
                 self.report_error_handled(
                     calculation,
                     'Convergence between lines failed. Reducing `min_neighbour_dist` and rerunning calculation.'
