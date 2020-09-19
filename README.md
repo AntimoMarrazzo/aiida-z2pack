@@ -12,12 +12,11 @@ The plugin supports Quantum ESPRESSO only.
 ### How do I get set up? ###
 
 The Z2pack plugin has the following dependencies:
-* numpy==1.16.4
-* scipy==1.4.1
-* sklearn==0.22.1
+* numpy~=1.17,<1.18
+* scipy>=1.4.1
+* scikit-learn>=0.22
 * z2pack==2.1.1
-* aiida>=1.0.0
-* aiida_quantumespresso>=3.0.0
+* aiida_quantumespresso==3.1.0
 * aiida_wannier90>=2.0.0
 
 Installing:
