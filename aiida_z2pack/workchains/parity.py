@@ -223,6 +223,8 @@ class Z2QSHworkchain(WorkChain):
             message='Must provide either `scf` namelist or `parent_folder` RemoteData as input.')
         spec.exit_code(343, 'ERROR_UNKOWN_REMOTE',
             message='Remote folder must com either from PwCalculation or Z2packCalculation.')
+        spec.exit_code(344, 'ERROR_STRUCTURE_MISMATCH',
+            message='The provided inputs structure does not match with the one inherited from parent_folder.')
         spec.exit_code(433, 'ERROR_INVALID_Z2_RESULT',
             message='Must provide either `scf` namelist or `parent_folder` RemoteData as input.')
         # yapf: enable
@@ -253,13 +255,23 @@ class Z2QSHworkchain(WorkChain):
                 self.ctx.current_structure = parent.inputs.structure
                 self.ctx.scf_out_params = parent.outputs.output_parameters
             elif pname == 'Z2packCalculation':
-                self.ctx.current_structure = self.inputs.structure
+                prev = remote.creator
+                while True:
+                    try:
+                        prev = prev.inputs.parent_folder.creator
+                    except:
+                        break
+                self.ctx.current_structure = prev.inputs.structure
                 self.ctx.should_use_parity = False
             else:
                 self.report(
                     'Don\'t know how to use remote folder from {}'.format(
                         pname))
                 return self.exit_codes.ERROR_UNKOWN_REMOTE
+
+            if 'structure' in self.inputs:
+                if self.inputs.structure.pk != self.ctx.current_structure.pk:
+                    return self.exit_codes.ERROR_STRUCTURE_MISMATCH
 
         self.ctx.parities_ok = True
 
@@ -443,6 +455,7 @@ class Z2QSHworkchain(WorkChain):
             'dimension_mode': '2D',
             'invariant': 'Z2',
         })
+        inputs.z2pack.z2pack_settings = orm.Dict(dict=settings)
 
         self.ctx.inputs = inputs
 
