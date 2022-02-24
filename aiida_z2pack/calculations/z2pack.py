@@ -90,7 +90,8 @@ class Z2packCalculation(CalcJob):
             )
         spec.input(
             'overlap_parameters', valid_type=orm.Dict,
-            required=False,
+            # required=False,
+            default=lambda: orm.Dict(dict={}),
             help='Dict: Input parameters for the overlap code (pw2wannier).'
             )
         spec.input(
@@ -188,9 +189,6 @@ class Z2packCalculation(CalcJob):
         self.inputs.metadata.options.parser_name = 'z2pack.z2pack'
         self.inputs.metadata.options.output_filename = self._OUTPUT_Z2PACK_FILE
         self.inputs.metadata.options.input_filename = self._INPUT_Z2PACK_FILE
-
-        if 'overlap_parameters' not in self.inputs:
-            self.inputs.overlap_parameters = orm.Dict(dict={})
 
         calcinfo = datastructures.CalcInfo()
 

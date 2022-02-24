@@ -163,27 +163,29 @@ def prepare_z2pack(cls, folder):
             'Only dimension_mode 2D and 3D are currently implemented.')
 
     input_file_lines.append('')
+    input_file_lines.append("ptr_surf = result.convergence_report['surface']")
+    input_file_lines.append("ptr_line = result.convergence_report['line']")
     input_file_lines.append(
         "gap_check['PASSED']  = "
-        "result.convergence_report['surface']['GapCheck']['PASSED']")
+        "ptr_surf['GapCheck']['PASSED'] if 'GapCheck' in ptr_surf else []")
     input_file_lines.append(
         "gap_check['FAILED']  = "
-        "result.convergence_report['surface']['GapCheck']['FAILED']")
+        "ptr_surf['GapCheck']['FAILED'] if 'GapCheck' in ptr_surf else []")
     input_file_lines.append(
         "move_check['PASSED'] = "
-        "result.convergence_report['surface']['MoveCheck']['PASSED']")
+        "ptr_surf['MoveCheck']['PASSED'] if 'MoveCheck' in ptr_surf else []")
     input_file_lines.append(
         "move_check['FAILED'] = "
-        "result.convergence_report['surface']['MoveCheck']['FAILED']")
+        "ptr_surf['MoveCheck']['FAILED'] if 'MoveCheck' in ptr_surf else []")
     input_file_lines.append(
         "pos_check['PASSED']  = "
-        "result.convergence_report['line']['PosCheck']['PASSED']")
+        "ptr_line['PosCheck']['PASSED'] if 'PosCheck' in ptr_line else []")
     input_file_lines.append(
         "pos_check['FAILED']  = "
-        "result.convergence_report['line']['PosCheck']['FAILED']")
+        "ptr_line['PosCheck']['FAILED'] if 'PosCheck' in ptr_line else []")
     input_file_lines.append(
         "pos_check['MISSING'] = "
-        "result.convergence_report['line']['PosCheck']['MISSING']")
+        "ptr_line['PosCheck']['MISSING'] if 'PosCheck' in ptr_line else []")
 
     input_file_lines.append('')
     input_file_lines.append(
