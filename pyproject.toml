@@ -26,7 +26,7 @@ requires-python = '>=3.8'
 dependencies = [
     'numpy',
     'z2pack==2.1.1',
-    'aiida-core~=2',
+    'aiida-core~=2.1.2',
     'aiida_quantumespresso~=4.0',
     'aiida_wannier90~=2.0.0'
 ]
@@ -39,7 +39,7 @@ Documentation = ''
 [project.optional-dependencies]
 chern = [
     'scipy',
-    'scikit-learn~=0.22',
+    'scikit-learn~=0.22'
 ]
 docs = [
     'sphinx~=4.1',
