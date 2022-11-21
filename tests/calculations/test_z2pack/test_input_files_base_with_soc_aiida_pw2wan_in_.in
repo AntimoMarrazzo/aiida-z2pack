@@ -5,4 +5,3 @@
   write_amn = .false.
   write_mmn = .true.
 /
-
