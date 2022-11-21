@@ -8,8 +8,6 @@ from sklearn.cluster import AgglomerativeClustering
 from aiida import orm
 from aiida.engine import calcfunction
 from aiida.common.exceptions import InputValidationError
-from six.moves import range
-from six.moves import zip
 
 
 def recipr_base(base):

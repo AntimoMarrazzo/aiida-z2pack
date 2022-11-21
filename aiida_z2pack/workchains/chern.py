@@ -14,7 +14,6 @@ from .functions import (
     get_crossing_and_lowgap_points, merge_crossing_results,
     merge_chern_results
     )
-from six.moves import range
 # yapf: enable
 
 # Z2packCalculation   = CalculationFactory('z2pack.z2pack')
