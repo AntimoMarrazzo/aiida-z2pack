@@ -111,11 +111,11 @@ class Z2QSHworkchain(WorkChain):
 
         # INPUTS ############################################################################
         spec.input(
-            'pw_code', valid_type=orm.Code,
+            'pw_code', valid_type=orm.AbstractCode,
             help='The code for pw.x calculations.'
             )
         spec.input(
-            'bands_code', valid_type=orm.Code,
+            'bands_code', valid_type=orm.AbstractCode,
             help='The code for bands.x calculations.'
             )
         spec.input(

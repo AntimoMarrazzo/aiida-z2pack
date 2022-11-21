@@ -74,9 +74,9 @@ def prepare_z2pack(cls, folder):
     input_file_lines.append('import z2pack')
     input_file_lines.append('import json')
 
-    nscf_cmd      = ' {} {}'.format(mpi_command, pw_code.get_execname())
-    overlap_cmd   = ' {} {}'.format(mpi_command, overlap_code.get_execname())
-    wannier90_cmd = ' {}'.format(wannier90_code.get_execname())
+    nscf_cmd      = ' {} {}'.format(mpi_command, pw_code.get_executable())
+    overlap_cmd   = ' {} {}'.format(mpi_command, overlap_code.get_executable())
+    wannier90_cmd = ' {}'.format(wannier90_code.get_executable())
 
     pw_in_cmd = settings_dict.get('pw_in_command', '<')
 

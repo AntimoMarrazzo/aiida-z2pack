@@ -80,8 +80,8 @@ def get_previous_node(old, node_class):
     :param old: Starting node from which to walk back on the chain
     :param node_class: Subclass of CalcJob in the chain
     """
-    remote = old.get_incoming(node_class=orm.RemoteData).first().node
-    new = remote.get_incoming(node_class=node_class).first().node
+    remote = old.base.links.get_incoming(node_class=orm.RemoteData).first().node
+    new = remote.base.links.get_incoming(node_class=node_class).first().node
 
     return new
 
@@ -97,7 +97,7 @@ def recursive_get_linked_node(node, label, node_class):
     res = None
     while res is None:
         try:
-            res = node.get_incoming(link_label_filter=label).first().node
+            res = node.base.links.get_incoming(link_label_filter=label).first().node
         except:
             node = get_previous_node(node, node_class)
 
@@ -109,7 +109,7 @@ def get_root_parent(cls, node_class):
     Get the topmost node in a chain of CalcJobs
     """
     parent = cls.inputs.parent_folder
-    calc = parent.get_incoming(node_class=node_class).first().node
+    calc = parent.base.links.get_incoming(node_class=node_class).first().node
 
     while True:
         try:

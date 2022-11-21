@@ -44,7 +44,7 @@ class FindCrossingsWorkChain(WorkChain):
 
         # INPUTS ############################################################################
         spec.input(
-            'code', valid_type=orm.Code,
+            'code', valid_type=orm.AbstractCode,
             help='The PWscf code.'
             )
         spec.input(
@@ -460,7 +460,7 @@ class Z2pack3DChernWorkChain(WorkChain):
 
         # INPUTS ############################################################################
         spec.input(
-            'pw_code', valid_type=orm.Code,
+            'pw_code', valid_type=orm.AbstractCode,
             help='The code for pw calculations.'
             )
         spec.input(
