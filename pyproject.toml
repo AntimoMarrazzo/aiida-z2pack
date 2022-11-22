@@ -28,7 +28,7 @@ dependencies = [
     'z2pack==2.1.1',
     'aiida-core~=2.1.2',
     'aiida_quantumespresso~=4.0',
-    'aiida_wannier90~=2.0.0'
+    'aiida_wannier90~=3.0.0'
 ]
 
 [project.urls]
