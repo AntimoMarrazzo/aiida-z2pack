@@ -55,6 +55,3 @@ res_dict['convergence_report']['PosCheck'].update(pos_check)
 
 with open('results.json', 'w') as fp:
     json.dump(res_dict, fp)
-
-
-

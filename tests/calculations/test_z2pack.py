@@ -185,7 +185,7 @@ class Test_z2pack_calc():
         """Test if all the required input files are equal to the test prototype."""
         path = fixture_sandbox.get_abs_path(name)
         with open(path, 'r') as f:
-            written_input = f.read()
+            written_input = f.read().strip()
 
         file_regression.check(written_input, encoding='utf-8', extension='.in')
 

@@ -10,9 +10,6 @@ from aiida.engine import WorkChain, if_, ToContext, calcfunction
 from aiida_quantumespresso.utils.mapping import prepare_process_inputs
 # from aiida_quantumespresso.calculations import _lowercase_dict
 
-from six.moves import zip
-from six.moves import range
-
 PwBaseWorkChain = WorkflowFactory('quantumespresso.pw.base')
 BandsxCalculation = CalculationFactory('quantumespresso.bandsx')
 Z2packBaseWorkChain = WorkflowFactory('z2pack.base')
@@ -114,11 +111,11 @@ class Z2QSHworkchain(WorkChain):
 
         # INPUTS ############################################################################
         spec.input(
-            'pw_code', valid_type=orm.Code,
+            'pw_code', valid_type=orm.AbstractCode,
             help='The code for pw.x calculations.'
             )
         spec.input(
-            'bands_code', valid_type=orm.Code,
+            'bands_code', valid_type=orm.AbstractCode,
             help='The code for bands.x calculations.'
             )
         spec.input(

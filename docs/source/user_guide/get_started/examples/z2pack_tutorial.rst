@@ -239,10 +239,10 @@ List of possible inputs
          - `iterator` (string): string that can be evaluated as a python iterator (eg: ``range(8, 41, 2)``). See `Z2pack documentation <http://z2pack.ethz.ch/doc/2.1/tutorial/surface.html#convergence-options>`_
          - `prepend_code` (string): Code to prepend at the beginning of the python script
 
-   - `pw_code` (orm.Code): Node for pw.x
-   - `overlap_code` (orm.Code): Node for pw2wannier90.x
-   - `wannier90_code` (orm.Code): Node for wannier90.x
-   - `code` (orm.Code) : Ndoe for python interpreter with Z2pack installed
+   - `pw_code` (orm.AbstractCode): Node for pw.x
+   - `overlap_code` (orm.AbstractCode): Node for pw2wannier90.x
+   - `wannier90_code` (orm.AbstractCode): Node for wannier90.x
+   - `code` (orm.AbstractCode) : Ndoe for python interpreter with Z2pack installed
    - `metadata` (dict): metadata to be stored and to specify resources for a the calculation. See `AiiDA documentation <https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/processes/usage.html?highlight=metadata#process-metadata>`_ for more details.
 
 Starting from a ``scf`` calculation
@@ -416,7 +416,7 @@ Base workchain inputs
   * `pw_code`
 
 * `structure` (orm.StructureData): Node containing the material structure
-* `pw_code` (orm.Code): Node for ``pw.x``
+* `pw_code` (orm.AbstractCode): Node for ``pw.x``
 * `clean_workdir` (orm.Bool): If True, clean the working directories of the ``pw.x`` calculations.
 * `parent_folder` (orm.RemoteData): Output remote node of the ``scf`` calculation.
 * `min_neighbour_distance_scale_factor` (orm.Float): If the convergence is not achieved using the `min_neighbour_distance` passed through `z2pack_settings`, restart the calculation by decreasing the value (`new_min_neighbour_distance` = `old_min_neighbour_distance` / `min_neighbour_distance_scale_factor`)

@@ -5,7 +5,7 @@ from aiida.common import exceptions
 from aiida.parsers.parser import Parser
 from aiida.plugins import DataFactory, CalculationFactory
 
-Dict              = DataFactory('dict')
+Dict              = DataFactory('core.dict')
 Z2packCalculation = CalculationFactory('z2pack.z2pack')
 
 
@@ -20,7 +20,7 @@ class Z2packParser(Parser):
             out_folder = self.retrieved
         except exceptions.NotExistent:
             return self.exit(self.exit_codes.ERROR_NO_RETRIEVED_FOLDER)
-        retrieved_names = out_folder.list_object_names()
+        retrieved_names = out_folder.base.repository.list_object_names()
 
         # Missing required files
         if pc._OUTPUT_Z2PACK_FILE not in retrieved_names:
@@ -36,9 +36,9 @@ class Z2packParser(Parser):
         if pc._ERROR_PW_FILE in retrieved_names:
             return self.exit(self.exit_codes.ERROR_PW_CRASH)
 
-        with out_folder.open(pc._OUTPUT_RESULT_FILE) as f:
+        with out_folder.base.repository.open(pc._OUTPUT_RESULT_FILE) as f:
             data = json.load(f)
-        with out_folder.open(pc._OUTPUT_Z2PACK_FILE) as f:
+        with out_folder.base.repository.open(pc._OUTPUT_Z2PACK_FILE) as f:
             out_file = f.readlines()
 
         gap_f   = len(data['convergence_report']['GapCheck']['FAILED'])

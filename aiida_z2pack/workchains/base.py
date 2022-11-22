@@ -37,7 +37,7 @@ class Z2packBaseWorkChain(BaseRestartWorkChain):
             help='The inputs structure.'
             )
         spec.input(
-            'pw_code', valid_type=orm.Code,
+            'pw_code', valid_type=orm.AbstractCode,
             help='The code for pw calculations.'
             )
         spec.input(
