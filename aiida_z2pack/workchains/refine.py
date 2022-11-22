@@ -24,7 +24,7 @@ class RefineCrossingsPosition(WorkChain):
         super().define(spec)
 
         # INPUTS ############################################################################
-        spec.input('code', valid_type=orm.Code, help='The PWscf code.')
+        spec.input('code', valid_type=orm.AbstractCode, help='The PWscf code.')
 
         spec.input(
             'structure', valid_type=orm.StructureData,

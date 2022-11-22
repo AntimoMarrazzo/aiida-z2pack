@@ -23,7 +23,7 @@ def test_z2pack_default(
 
     assert calcfunction.is_finished, calcfunction.exception
     assert calcfunction.is_finished_ok, calcfunction.exit_message
-    assert not orm.Log.objects.get_logs_for(node)
+    assert not orm.Log.collection.get_logs_for(node)
 
     data_regression.check({
         'output_parameters': results['output_parameters'].get_dict()
@@ -47,7 +47,7 @@ def test_z2pack_failed_missing(
     assert calcfunction.is_finished, calcfunction.exception
     assert calcfunction.is_failed, calcfunction.exit_status
     assert calcfunction.exit_status, node.process_class.exit_codes.ERROR_OUTPUT_FILES.status
-    assert orm.Log.objects.get_logs_for(node)
+    assert orm.Log.collection.get_logs_for(node)
 
 def test_z2pack_failed_missing_results(
     aiida_profile, fixture_localhost,
@@ -67,7 +67,7 @@ def test_z2pack_failed_missing_results(
     assert calcfunction.is_finished, calcfunction.exception
     assert calcfunction.is_failed, calcfunction.exit_status
     assert calcfunction.exit_status, node.process_class.exit_codes.ERROR_MISSING_RESULTS_FILE.status
-    assert orm.Log.objects.get_logs_for(node)
+    assert orm.Log.collection.get_logs_for(node)
 
 def test_z2pack_failed_missing_save(
     aiida_profile, fixture_localhost,
@@ -87,7 +87,7 @@ def test_z2pack_failed_missing_save(
     assert calcfunction.is_finished, calcfunction.exception
     assert calcfunction.is_failed, calcfunction.exit_status
     assert calcfunction.exit_status, node.process_class.exit_codes.ERROR_MISSING_SAVE_FILE.status
-    assert orm.Log.objects.get_logs_for(node)
+    assert orm.Log.collection.get_logs_for(node)
 
 def test_z2pack_failed_pwcrash(
     aiida_profile, fixture_localhost,
@@ -107,7 +107,7 @@ def test_z2pack_failed_pwcrash(
     assert calcfunction.is_finished, calcfunction.exception
     assert calcfunction.is_failed, calcfunction.exit_status
     assert calcfunction.exit_status, node.process_class.exit_codes.ERROR_PW_CRASH.status
-    assert orm.Log.objects.get_logs_for(node)
+    assert orm.Log.collection.get_logs_for(node)
 
 def test_z2pack_failed_w90crash(
     aiida_profile, fixture_localhost,
@@ -127,5 +127,5 @@ def test_z2pack_failed_w90crash(
     assert calcfunction.is_finished, calcfunction.exception
     assert calcfunction.is_failed, calcfunction.exit_status
     assert calcfunction.exit_status, node.process_class.exit_codes.ERROR_W90_CRASH.status
-    assert orm.Log.objects.get_logs_for(node)
+    assert orm.Log.collection.get_logs_for(node)
 

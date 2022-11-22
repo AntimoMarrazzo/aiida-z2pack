@@ -30,11 +30,23 @@ def fixture_localhost(aiida_localhost):
 
 @pytest.fixture
 def fixture_code(fixture_localhost):
-    """Return a `Code` instance configured to run calculations of given entry point on localhost `Computer`."""
+    """Return an ``InstalledCode`` instance configured to run calculations of given entry point on localhost."""
 
     def _fixture_code(entry_point_name):
-        from aiida.orm import Code
-        return Code(input_plugin_name=entry_point_name, remote_computer_exec=[fixture_localhost, '/bin/true'])
+        from aiida.common import exceptions
+        from aiida.orm import InstalledCode, load_code
+
+        label = f'test.{entry_point_name}'
+
+        try:
+            return load_code(label=label)
+        except exceptions.NotExistent:
+            return InstalledCode(
+                label=label,
+                computer=fixture_localhost,
+                filepath_executable='/bin/true',
+                default_calc_job_plugin=entry_point_name,
+            )
 
     return _fixture_code
 
@@ -95,14 +107,14 @@ def generate_calc_job_node():
         entry_point = format_entry_point_string('aiida.calculations', entry_point_name)
 
         node = orm.CalcJobNode(computer=computer, process_type=entry_point)
-        node.set_attribute('input_filename', 'aiida.in')
-        node.set_attribute('output_filename', 'aiida.out')
-        node.set_attribute('error_filename', 'aiida.err')
+        node.base.attributes.set('input_filename', 'aiida.in')
+        node.base.attributes.set('output_filename', 'aiida.out')
+        node.base.attributes.set('error_filename', 'aiida.err')
         node.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         node.set_option('max_wallclock_seconds', 1800)
 
         if attributes:
-            node.set_attribute_many(attributes)
+            node.base.attributes.set_many(attributes)
 
         if inputs:
             for link_label, input_node in flatten_inputs(inputs):
@@ -118,12 +130,12 @@ def generate_calc_job_node():
             )
 
             retrieved = orm.FolderData()
-            retrieved.put_object_from_tree(filepath)
-            retrieved.add_incoming(node, link_type=LinkType.CREATE, link_label='retrieved')
+            retrieved.base.repository.put_object_from_tree(filepath)
+            retrieved.base.links.add_incoming(node, link_type=LinkType.CREATE, link_label='retrieved')
             retrieved.store()
 
             remote_folder = orm.RemoteData(computer=computer, remote_path='/tmp')
-            remote_folder.add_incoming(node, link_type=LinkType.CREATE, link_label='remote_folder')
+            remote_folder.base.links.add_incoming(node, link_type=LinkType.CREATE, link_label='remote_folder')
             remote_folder.store()
 
         return node
@@ -219,14 +231,14 @@ def generate_remote_data():
         if entry_point_name is not None:
             creator = CalcJobNode(computer=computer, process_type=entry_point)
             creator.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
-            remote.add_incoming(creator, link_type=LinkType.CREATE, link_label='remote_folder')
+            remote.base.links.add_incoming(creator, link_type=LinkType.CREATE, link_label='remote_folder')
 
             for extra in extras_root:
                 to_link = extra[0]
                 if isinstance(to_link, dict):
                     to_link = Dict(dict=to_link)
                 to_link.store()
-                creator.add_incoming(to_link, link_type=LinkType.INPUT_CALC, link_label=extra[1])
+                creator.base.links.add_incoming(to_link, link_type=LinkType.INPUT_CALC, link_label=extra[1])
 
             creator.store()
 

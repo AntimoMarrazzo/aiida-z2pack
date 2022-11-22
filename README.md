@@ -2,7 +2,8 @@
 
 # aiida-z2pack
 
-Official Z2pack plugin for AiiDA.  
+Official Z2pack plugin for AiiDA. 
+ The repository as of aiida-z2pack>=3.0 is compatible with aiida-core>=2.0.0 (tested up to 2.1.2). 
 The repository as of aiida-z2pack>=2.0 is compatible with aiida-core>=1.0.0 (tested up to 1.6.5). 
 For compatibility with older versions use aiida-z2pack==1.0.  
 The plugin supports Quantum ESPRESSO only.
@@ -12,13 +13,11 @@ The plugin supports Quantum ESPRESSO only.
 ### How do I get set up? ###
 
 The Z2pack plugin has the following dependencies:
-* numpy~=1.17
-* scipy~=1.4.1
-* scikit-learn~=0.22
+* numpy
 * z2pack==2.1.1
-* aiida-core~=1.5.0
-* aiida_quantumespresso~=3.1.0
-* aiida_wannier90~=2.0.0 
+* aiida-core~=2.1.2
+* aiida_quantumespresso~=3.0
+* aiida_wannier90~=3.0.0 
 
 Installing:
 * `pip install .`

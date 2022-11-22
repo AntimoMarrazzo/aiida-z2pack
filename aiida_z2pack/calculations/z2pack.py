@@ -112,22 +112,22 @@ class Z2packCalculation(CalcJob):
             )
 
         spec.input(
-            'pw_code', valid_type=orm.Code,
+            'pw_code', valid_type=orm.AbstractCode,
             required=False,
             help='NSCF code to be used by z2pack.'
             )
         spec.input(
-            'overlap_code', valid_type=orm.Code,
+            'overlap_code', valid_type=orm.AbstractCode,
             required=False,
             help='Overlap code to be used by z2pack.'
             )
         spec.input(
-            'wannier90_code', valid_type=orm.Code,
+            'wannier90_code', valid_type=orm.AbstractCode,
             required=False,
             help='Wannier code to be used by z2pack.'
             )
         spec.input(
-            'code', valid_type=orm.Code,
+            'code', valid_type=orm.AbstractCode,
             required=False,
             help='Z2pack code.'
             )
@@ -285,7 +285,7 @@ class Z2packCalculation(CalcJob):
         parent = self.inputs.parent_folder
         calc   = parent.creator
 
-        pseudos      = calc.get_incoming(link_label_filter='pseudos%').all()
+        pseudos      = calc.base.links.get_incoming(link_label_filter='pseudos%').all()
         pseudos_dict = {name[9:]:upf for upf,_,name in pseudos}
         self.inputs.pseudos       = pseudos_dict
         self.inputs.structure     = calc.inputs.structure
