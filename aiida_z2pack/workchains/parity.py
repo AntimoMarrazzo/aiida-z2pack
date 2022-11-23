@@ -11,8 +11,11 @@ from aiida_quantumespresso.utils.mapping import prepare_process_inputs
 # from aiida_quantumespresso.calculations import _lowercase_dict
 
 PwBaseWorkChain = WorkflowFactory('quantumespresso.pw.base')
-BandsxCalculation = CalculationFactory('quantumespresso.bandsx')
 Z2packBaseWorkChain = WorkflowFactory('z2pack.base')
+try:
+    BandsxCalculation = CalculationFactory('quantumespresso.bandsx')
+except:
+    BandsxCalculation = None
 
 
 @calcfunction
@@ -312,6 +315,8 @@ class Z2QSHworkchain(WorkChain):
 
     def should_use_parity(self):
         """Check whether parities can/should be used for the calculations instead of z2pack."""
+        if BandsxCalculation is None:
+            return False
         if 'should_use_parity' in self.ctx:
             return self.ctx.should_use_parity
 
